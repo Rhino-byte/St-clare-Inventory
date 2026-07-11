@@ -8,6 +8,7 @@ import {
   type ItemMovementRow,
 } from "@/components/admin/StockMovementSummary";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/loading-state";
 import { fetchAnalytics } from "@/lib/api-client";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 
@@ -62,7 +63,11 @@ export function AnalyticsPageClient() {
       </div>
 
       {loading || !data ? (
-        <p className="text-sm text-slate-500">Loading analytics...</p>
+        <LoadingState
+          label="Loading analytics"
+          layout="centered"
+          className="min-h-[40vh]"
+        />
       ) : (
         <div className="space-y-6">
           <AnalyticsCharts

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { signOutFirebase } from "@/lib/auth/firebase-client";
+import { portalLogout } from "@/lib/auth/portal-client";
 import { useFirebaseAuth } from "@/lib/auth/use-firebase-auth";
 import { ResponsiveNav } from "@/components/layout/ResponsiveNav";
 
@@ -15,6 +16,7 @@ export function ClerkNav() {
   const { user } = useFirebaseAuth();
 
   async function handleSignOut() {
+    await portalLogout();
     await signOutFirebase();
     router.push("/");
   }
@@ -22,7 +24,7 @@ export function ClerkNav() {
   return (
     <ResponsiveNav
       title="St Clare Inventory"
-      subtitle="Clerk workspace"
+      subtitle="Staff workspace"
       links={links}
       maxWidth="max-w-3xl"
       onSignOut={handleSignOut}

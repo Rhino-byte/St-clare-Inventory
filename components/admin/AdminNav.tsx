@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { signOutFirebase } from "@/lib/auth/firebase-client";
+import { portalLogout } from "@/lib/auth/portal-client";
 import { ResponsiveNav } from "@/components/layout/ResponsiveNav";
 
 const links = [
@@ -15,6 +16,7 @@ export function AdminNav() {
   const router = useRouter();
 
   async function handleSignOut() {
+    await portalLogout();
     await signOutFirebase();
     router.push("/");
   }

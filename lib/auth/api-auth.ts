@@ -1,4 +1,5 @@
 import { verifyFirebaseToken } from "@/lib/auth/firebase-admin";
+import { hasValidPortalCookie } from "@/lib/auth/portal";
 import { isUidAllowed } from "@/lib/auth/roles";
 
 function unauthorized(message = "Unauthorized") {
@@ -41,6 +42,9 @@ export async function requireAdmin(request: Request) {
   if (!isUidAllowed(user.uid, "admin")) {
     throw forbidden();
   }
+  if (!hasValidPortalCookie(request, user.uid, "admin")) {
+    throw forbidden("Password verification required");
+  }
   return user;
 }
 
@@ -49,13 +53,28 @@ export async function requireClerk(request: Request) {
   if (!isUidAllowed(user.uid, "clerk")) {
     throw forbidden();
   }
+  if (!hasValidPortalCookie(request, user.uid, "clerk")) {
+    throw forbidden("Password verification required");
+  }
   return user;
 }
 
 export async function requireClerkOrAdmin(request: Request) {
   const user = await requireFirebaseUser(request);
-  if (!isUidAllowed(user.uid, "admin") && !isUidAllowed(user.uid, "clerk")) {
+  const isAdmin = isUidAllowed(user.uid, "admin");
+  const isClerk = isUidAllowed(user.uid, "clerk");
+
+  if (!isAdmin && !isClerk) {
     throw forbidden();
   }
+
+  const portalOk =
+    (isAdmin && hasValidPortalCookie(request, user.uid, "admin")) ||
+    (isClerk && hasValidPortalCookie(request, user.uid, "clerk"));
+
+  if (!portalOk) {
+    throw forbidden("Password verification required");
+  }
+
   return user;
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ItemsTable } from "@/components/admin/ItemsTable";
+import { LoadingState } from "@/components/ui/loading-state";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 import type { InventoryItem } from "@/lib/types";
 
@@ -33,7 +34,13 @@ export function ItemsPageClient() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading items...</p>;
+    return (
+      <LoadingState
+        label="Loading items"
+        layout="centered"
+        className="min-h-[40vh]"
+      />
+    );
   }
 
   return <ItemsTable initialItems={items} />;

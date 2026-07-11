@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
 
 function GoogleLogo({ className }: { className?: string }) {
@@ -57,11 +57,20 @@ export function GoogleSignInButton({
       )}
     >
       {loading ? (
-        <Loader2 className="h-5 w-5 animate-spin text-slate-500" />
+        <LoadingSpinner size="sm" />
       ) : (
         <GoogleLogo className="h-5 w-5 shrink-0" />
       )}
-      <span>{loading ? "Signing in..." : "Sign in with Google"}</span>
+      <span>
+        {loading ? (
+          <>
+            Signing in
+            <span className="loading-ellipsis" aria-hidden="true" />
+          </>
+        ) : (
+          "Sign in with Google"
+        )}
+      </span>
     </button>
   );
 }

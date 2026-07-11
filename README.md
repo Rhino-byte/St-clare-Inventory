@@ -1,10 +1,10 @@
 # St Clare Inventory Stock App
 
-A Next.js inventory app for St Clare that uses Google Sheets as the source of truth, Firebase Google sign-in for both admin and clerk roles, analytics dashboards, and SMTP low-stock alerts.
+A Next.js inventory app for St Clare that uses Google Sheets as the source of truth, Firebase Google sign-in for both admin and staff roles, analytics dashboards, and SMTP low-stock alerts.
 
 ## Features
 
-- **Clerk workspace:** record stock in and stock out against the shared Google Sheet
+- **Staff workspace:** record stock in and stock out against the shared Google Sheet
 - **Admin dashboard:** KPIs, low-stock table, item management, analytics charts
 - **Email alerts:** SMTP notifications when stock falls to the reorder level
 - **Audit log:** every movement is appended to a `Transactions` sheet tab
@@ -13,7 +13,7 @@ A Next.js inventory app for St Clare that uses Google Sheets as the source of tr
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - Google Sheets API (service account)
-- Firebase Auth (Google sign-in for admin and clerk)
+- Firebase Auth (Google sign-in for admin and staff)
 - Nodemailer (SMTP)
 - Recharts (analytics)
 - Vercel deployment + Cron
@@ -55,7 +55,8 @@ cp .env.example .env.local
 Important groups:
 
 - `NEXT_PUBLIC_FIREBASE_*` and `FIREBASE_ADMIN_*` for Firebase auth
-- `ADMIN_UIDS`, `CLERK_UIDS`, and matching `NEXT_PUBLIC_*` UID lists
+- `ADMIN_UIDS`, `STAFF_UIDS`, and matching `NEXT_PUBLIC_*` UID lists
+- `ADMIN_ACCESS_PASSWORD`, `STAFF_ACCESS_PASSWORD`, and `PORTAL_SECRET` for the second-step password gate
 - `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
 - `SMTP_*` and `ADMIN_ALERT_EMAIL`
 - `CRON_SECRET` for the scheduled low-stock job
@@ -65,15 +66,18 @@ Important groups:
 
 1. Enable **Google** sign-in in Firebase Console
 2. Add `localhost` to Firebase authorized domains
-3. Have each user sign in once at `/admin/login` or `/clerk/login`
+3. Have each user sign in once at `/admin/login` or `/clerk/login` (Google first, then role password)
 4. Copy their **UID** from Firebase Console → Authentication → Users
 5. Add UIDs to `.env.local`:
 
 ```bash
 ADMIN_UIDS=uidForAdmin1,uidForAdmin2
-CLERK_UIDS=uidForClerk1,uidForClerk2
+STAFF_UIDS=uidForStaff1,uidForStaff2
 NEXT_PUBLIC_ADMIN_UIDS=uidForAdmin1,uidForAdmin2
-NEXT_PUBLIC_CLERK_UIDS=uidForClerk1,uidForClerk2
+NEXT_PUBLIC_STAFF_UIDS=uidForStaff1,uidForStaff2
+ADMIN_ACCESS_PASSWORD=your-strong-admin-password
+STAFF_ACCESS_PASSWORD=your-strong-staff-password
+PORTAL_SECRET=random-long-secret-for-cookie-signing
 ```
 
 6. Restart the dev server
@@ -92,14 +96,14 @@ Open `http://localhost:3000`.
 | Route | Role | Purpose |
 |-------|------|---------|
 | `/` | Public | Landing page |
-| `/admin/login` | Admin | Firebase Google sign-in |
+| `/admin/login` | Admin | Google sign-in + admin password |
 | `/admin/dashboard` | Admin | KPIs and low-stock list |
 | `/admin/analytics` | Admin | Charts |
 | `/admin/items` | Admin | Edit items and reorder levels |
 | `/admin/alerts` | Admin | Test email + low-stock review |
-| `/clerk/login` | Clerk | Firebase Google sign-in |
-| `/clerk/stock-out` | Clerk | Record usage |
-| `/clerk/stock-in` | Clerk | Record incoming stock |
+| `/clerk/login` | Staff | Google sign-in + staff password |
+| `/clerk/stock-out` | Staff | Record usage |
+| `/clerk/stock-in` | Staff | Record incoming stock |
 
 ## Deploy to Vercel
 
@@ -134,9 +138,13 @@ Alerts are deduplicated using the `AlertLog` tab until stock recovers above the 
 
 ## Authentication
 
-Both admin and clerk use **Firebase Google sign-in**. Access is controlled by Firebase UID lists in the environment:
+Both admin and staff use **Firebase Google sign-in** plus a **second-step role password** verified on the server. Access is controlled by Firebase UID lists and portal passwords in the environment:
 
 - `ADMIN_UIDS` / `NEXT_PUBLIC_ADMIN_UIDS` — full dashboard access
-- `CLERK_UIDS` / `NEXT_PUBLIC_CLERK_UIDS` — stock in/out only
+- `STAFF_UIDS` / `NEXT_PUBLIC_STAFF_UIDS` — stock in/out only
+- `ADMIN_ACCESS_PASSWORD` / `STAFF_ACCESS_PASSWORD` — role passwords (server-only)
+- `PORTAL_SECRET` — signs the httpOnly portal cookie after password verification
+
+Login flow: Google sign-in first, then enter the role password. API routes require both a valid Firebase token and the portal cookie.
 
 Login pages use a branded **Sign in with Google** button with the official Google logo.

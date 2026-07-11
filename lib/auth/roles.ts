@@ -16,7 +16,10 @@ export function getAdminUids(): string[] {
 
 export function getClerkUids(): string[] {
   return parseUidList(
-    process.env.CLERK_UIDS ?? process.env.NEXT_PUBLIC_CLERK_UIDS
+    process.env.STAFF_UIDS ??
+      process.env.NEXT_PUBLIC_STAFF_UIDS ??
+      process.env.CLERK_UIDS ??
+      process.env.NEXT_PUBLIC_CLERK_UIDS
   );
 }
 

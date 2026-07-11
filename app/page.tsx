@@ -15,7 +15,7 @@ export default function HomePage() {
             St Clare Inventory
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-slate-600">
-            Track kitchen and store stock with Google Sheets, clerk stock movements,
+            Track kitchen and store stock with Google Sheets, staff stock movements,
             and admin analytics with low-stock email alerts.
           </p>
         </div>
@@ -43,14 +43,14 @@ export default function HomePage() {
               <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-800">
                 <Users className="h-5 w-5" />
               </div>
-              <CardTitle>Clerk</CardTitle>
+              <CardTitle>Staff</CardTitle>
               <CardDescription>
                 Record stock in and stock out during daily operations.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/clerk/login">Clerk sign in</Link>
+                <Link href="/clerk/login">Staff sign in</Link>
               </Button>
             </CardContent>
           </Card>

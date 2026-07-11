@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { LowStockTable } from "@/components/admin/LowStockTable";
 import { StatsCards } from "@/components/admin/StatsCards";
+import { LoadingState } from "@/components/ui/loading-state";
 import { fetchAnalytics } from "@/lib/api-client";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 import type { DashboardStats, InventoryItem } from "@/lib/types";
@@ -30,7 +31,13 @@ export function DashboardPageClient() {
   }, []);
 
   if (loading || !stats) {
-    return <p className="text-sm text-slate-500">Loading dashboard...</p>;
+    return (
+      <LoadingState
+        label="Loading dashboard"
+        layout="centered"
+        className="min-h-[40vh]"
+      />
+    );
   }
 
   return (
