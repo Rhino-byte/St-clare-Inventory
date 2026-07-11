@@ -77,3 +77,27 @@ export function dailyMovementTotals(transactions: Transaction[]) {
     .map(([date, values]) => ({ date, ...values }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+export function itemMovementTotals(transactions: Transaction[]) {
+  const totals = new Map<string, { itemName: string; in: number; out: number }>();
+  for (const tx of transactions) {
+    const current = totals.get(tx.itemId) ?? {
+      itemName: tx.itemName,
+      in: 0,
+      out: 0,
+    };
+    if (tx.type === "in") current.in += tx.quantity;
+    else current.out += tx.quantity;
+    totals.set(tx.itemId, current);
+  }
+
+  return Array.from(totals.entries())
+    .map(([itemId, values]) => ({
+      itemId,
+      itemName: values.itemName,
+      in: values.in,
+      out: values.out,
+      net: values.in - values.out,
+    }))
+    .sort((a, b) => b.in + b.out - (a.in + a.out));
+}

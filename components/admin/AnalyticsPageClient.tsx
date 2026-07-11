@@ -3,9 +3,20 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
+import {
+  StockMovementSummary,
+  type ItemMovementRow,
+} from "@/components/admin/StockMovementSummary";
 import { Button } from "@/components/ui/button";
 import { fetchAnalytics } from "@/lib/api-client";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
+
+const RANGE_OPTIONS = [
+  { label: "Today", value: 0 },
+  { label: "Last 7 days", value: 7 },
+  { label: "Last 30 days", value: 30 },
+  { label: "Last 90 days", value: 90 },
+] as const;
 
 export function AnalyticsPageClient() {
   const [days, setDays] = useState(30);
@@ -13,7 +24,7 @@ export function AnalyticsPageClient() {
   const [data, setData] = useState<{
     categoryStock: Array<{ category: string; stock: number }>;
     topConsumed: Array<{ itemId: string; itemName: string; quantity: number }>;
-    dailyMovement: Array<{ date: string; in: number; out: number }>;
+    itemMovement: ItemMovementRow[];
   } | null>(null);
 
   useEffect(() => {
@@ -25,7 +36,7 @@ export function AnalyticsPageClient() {
         setData({
           categoryStock: analytics.categoryStock,
           topConsumed: analytics.topConsumed,
-          dailyMovement: analytics.dailyMovement,
+          itemMovement: analytics.itemMovement,
         });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to load analytics");
@@ -39,13 +50,13 @@ export function AnalyticsPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
-        {[7, 30, 90].map((value) => (
+        {RANGE_OPTIONS.map((option) => (
           <Button
-            key={value}
-            variant={days === value ? "default" : "outline"}
-            onClick={() => setDays(value)}
+            key={option.value}
+            variant={days === option.value ? "default" : "outline"}
+            onClick={() => setDays(option.value)}
           >
-            Last {value} days
+            {option.label}
           </Button>
         ))}
       </div>
@@ -53,11 +64,13 @@ export function AnalyticsPageClient() {
       {loading || !data ? (
         <p className="text-sm text-slate-500">Loading analytics...</p>
       ) : (
-        <AnalyticsCharts
-          categoryStock={data.categoryStock}
-          topConsumed={data.topConsumed}
-          dailyMovement={data.dailyMovement}
-        />
+        <div className="space-y-6">
+          <AnalyticsCharts
+            categoryStock={data.categoryStock}
+            topConsumed={data.topConsumed}
+          />
+          <StockMovementSummary items={data.itemMovement} />
+        </div>
       )}
     </div>
   );

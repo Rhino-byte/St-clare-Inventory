@@ -4,9 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,16 +15,13 @@ import { useIsMobile } from "@/lib/use-media-query";
 interface AnalyticsChartsProps {
   categoryStock: Array<{ category: string; stock: number }>;
   topConsumed: Array<{ itemId: string; itemName: string; quantity: number }>;
-  dailyMovement: Array<{ date: string; in: number; out: number }>;
 }
 
 export function AnalyticsCharts({
   categoryStock,
   topConsumed,
-  dailyMovement,
 }: AnalyticsChartsProps) {
   const isMobile = useIsMobile();
-  const denseDateAxis = dailyMovement.length > 14;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -66,32 +60,6 @@ export function AnalyticsCharts({
               <Tooltip />
               <Bar dataKey="quantity" fill="#b45309" radius={[0, 4, 4, 0]} />
             </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Stock in vs stock out</CardTitle>
-        </CardHeader>
-        <CardContent className="h-72 sm:h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dailyMovement}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                interval={denseDateAxis ? "preserveStartEnd" : undefined}
-                angle={denseDateAxis ? -35 : 0}
-                textAnchor={denseDateAxis ? "end" : "middle"}
-                height={denseDateAxis ? 60 : 30}
-                tick={{ fontSize: isMobile ? 10 : 12 }}
-              />
-              <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="in" stroke="#047857" strokeWidth={2} />
-              <Line type="monotone" dataKey="out" stroke="#b91c1c" strokeWidth={2} />
-            </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
