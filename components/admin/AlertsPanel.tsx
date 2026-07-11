@@ -56,7 +56,7 @@ export function AlertsPanel() {
         <CardHeader>
           <CardTitle>Email alerts</CardTitle>
           <CardDescription>
-            Low-stock alerts are sent automatically after stock movements and every 6 hours.
+            Low-stock alerts are sent automatically after stock movements and once a day.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
