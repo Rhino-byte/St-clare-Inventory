@@ -1,0 +1,142 @@
+# St Clare Inventory Stock App
+
+A Next.js inventory app for St Clare that uses Google Sheets as the source of truth, Firebase Google sign-in for both admin and clerk roles, analytics dashboards, and SMTP low-stock alerts.
+
+## Features
+
+- **Clerk workspace:** record stock in and stock out against the shared Google Sheet
+- **Admin dashboard:** KPIs, low-stock table, item management, analytics charts
+- **Email alerts:** SMTP notifications when stock falls to the reorder level
+- **Audit log:** every movement is appended to a `Transactions` sheet tab
+
+## Tech stack
+
+- Next.js 16 (App Router) + TypeScript + Tailwind CSS
+- Google Sheets API (service account)
+- Firebase Auth (Google sign-in for admin and clerk)
+- Nodemailer (SMTP)
+- Recharts (analytics)
+- Vercel deployment + Cron
+
+## Prerequisites
+
+1. A Google Cloud project with the **Google Sheets API** enabled
+2. A Google service account with access to the inventory spreadsheet
+3. A Firebase project with Google sign-in enabled
+4. SMTP credentials for alert emails
+
+## Google Sheet setup
+
+Use this spreadsheet (or your own copy with the same columns):
+
+`https://docs.google.com/spreadsheets/d/13YAJPLi-W_JxZBRAj-7GMdV0iLvG4Kn_4oufQKB15fo/edit`
+
+`Sheet1` columns:
+
+| A | B | C | D | E | F | G | H | I | J |
+|---|---|---|---|---|---|---|---|---|---|
+| Item ID | Item Name | Category | Unit | Opening Stock | Stock In | Stock Out | Closing Stock | Reorder Level | Notes |
+
+The app will auto-create these tabs if they do not exist:
+
+- `Transactions`
+- `AlertLog`
+
+Share the spreadsheet with your service account email as **Editor**.
+
+## Environment variables
+
+Copy `.env.example` to `.env.local` and fill in all values:
+
+```bash
+cp .env.example .env.local
+```
+
+Important groups:
+
+- `NEXT_PUBLIC_FIREBASE_*` and `FIREBASE_ADMIN_*` for Firebase auth
+- `ADMIN_UIDS`, `CLERK_UIDS`, and matching `NEXT_PUBLIC_*` UID lists
+- `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+- `SMTP_*` and `ADMIN_ALERT_EMAIL`
+- `CRON_SECRET` for the scheduled low-stock job
+- `NEXT_PUBLIC_APP_URL` for links inside alert emails
+
+### Setting up Firebase UIDs
+
+1. Enable **Google** sign-in in Firebase Console
+2. Add `localhost` to Firebase authorized domains
+3. Have each user sign in once at `/admin/login` or `/clerk/login`
+4. Copy their **UID** from Firebase Console → Authentication → Users
+5. Add UIDs to `.env.local`:
+
+```bash
+ADMIN_UIDS=uidForAdmin1,uidForAdmin2
+CLERK_UIDS=uidForClerk1,uidForClerk2
+NEXT_PUBLIC_ADMIN_UIDS=uidForAdmin1,uidForAdmin2
+NEXT_PUBLIC_CLERK_UIDS=uidForClerk1,uidForClerk2
+```
+
+6. Restart the dev server
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Routes
+
+| Route | Role | Purpose |
+|-------|------|---------|
+| `/` | Public | Landing page |
+| `/admin/login` | Admin | Firebase Google sign-in |
+| `/admin/dashboard` | Admin | KPIs and low-stock list |
+| `/admin/analytics` | Admin | Charts |
+| `/admin/items` | Admin | Edit items and reorder levels |
+| `/admin/alerts` | Admin | Test email + low-stock review |
+| `/clerk/login` | Clerk | Firebase Google sign-in |
+| `/clerk/stock-out` | Clerk | Record usage |
+| `/clerk/stock-in` | Clerk | Record incoming stock |
+
+## Deploy to Vercel
+
+1. Push the repository to GitHub
+2. Import the project in Vercel
+3. Add all environment variables from `.env.example`
+4. Deploy
+
+`vercel.json` includes a cron job that calls `/api/cron/check-stock` every 6 hours.
+
+Set `CRON_SECRET` in Vercel and ensure the cron route receives:
+
+```http
+Authorization: Bearer <CRON_SECRET>
+```
+
+## Stock logic
+
+Closing stock is recalculated on every write:
+
+```text
+Closing Stock = Opening Stock + Stock In - Stock Out
+```
+
+Low-stock alerts fire when:
+
+```text
+Closing Stock <= Reorder Level
+```
+
+Alerts are deduplicated using the `AlertLog` tab until stock recovers above the reorder level.
+
+## Authentication
+
+Both admin and clerk use **Firebase Google sign-in**. Access is controlled by Firebase UID lists in the environment:
+
+- `ADMIN_UIDS` / `NEXT_PUBLIC_ADMIN_UIDS` — full dashboard access
+- `CLERK_UIDS` / `NEXT_PUBLIC_CLERK_UIDS` — stock in/out only
+
+Login pages use a branded **Sign in with Google** button with the official Google logo.
