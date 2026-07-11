@@ -121,6 +121,9 @@ export async function clearAlertIfRecovered(item: InventoryItem): Promise<void> 
     const logs = await getAlertLogs();
     const existing = logs.find((log) => log.itemId === item.itemId);
     if (existing) {
+      // Mark the episode as cleared by storing a value above the reorder
+      // level. sendLowStockAlert treats this as inactive, so the next time
+      // stock drops to or below the reorder level a fresh alert is sent.
       await upsertAlertLog({
         itemId: item.itemId,
         lastAlertedAt: existing.lastAlertedAt,
