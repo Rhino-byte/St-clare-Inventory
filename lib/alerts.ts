@@ -55,9 +55,14 @@ export async function sendLowStockAlert(item: InventoryItem): Promise<boolean> {
     return false;
   }
 
+  const reorderLevel = item.reorderLevel;
+
   const logs = await getAlertLogs();
   const existing = logs.find((log) => log.itemId === item.itemId);
-  if (existing && item.closingStock <= existing.stockAtAlert) {
+  // Skip only when an alert is already active for the current low-stock
+  // episode. A recovered episode is cleared by storing stockAtAlert above the
+  // reorder level (see clearAlertIfRecovered), which lets the next drop alert.
+  if (existing && existing.stockAtAlert <= reorderLevel) {
     return false;
   }
 

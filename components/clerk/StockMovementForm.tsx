@@ -33,7 +33,9 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
   useEffect(() => {
     fetchInventory()
       .then(setItems)
-      .catch((error: Error) => toast.error(error.message))
+      .catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Failed to load inventory")
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -116,7 +118,7 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
               <SelectContent>
                 {filteredItems.map((item) => (
                   <SelectItem key={item.itemId} value={item.itemId}>
-                    {item.itemName} ({formatNumber(item.closingStock)} {item.unit || "units"})
+                    {item.itemName}
                   </SelectItem>
                 ))}
               </SelectContent>
