@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ItemSearchCombobox } from "@/components/clerk/ItemSearchCombobox";
 import { fetchInventory, submitStockMovement } from "@/lib/api-client";
 import { formatNumber } from "@/lib/utils";
 import type { InventoryItem } from "@/lib/types";
@@ -25,7 +19,6 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch] = useState("");
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
@@ -38,16 +31,6 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
       )
       .finally(() => setLoading(false));
   }, []);
-
-  const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter(
-      (item) =>
-        item.itemName.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
-    );
-  }, [items, search]);
 
   const selectedItem = items.find((item) => item.itemId === itemId);
 
@@ -99,31 +82,12 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="search">Search items</Label>
-            <Input
-              id="search"
-              placeholder="Search by item or category"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Item</Label>
-            <Select value={itemId} onValueChange={setItemId} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue placeholder={loading ? "Loading items..." : "Select an item"} />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredItems.map((item) => (
-                  <SelectItem key={item.itemId} value={item.itemId}>
-                    {item.itemName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ItemSearchCombobox
+            items={items}
+            value={itemId}
+            onChange={setItemId}
+            disabled={loading}
+          />
 
           {selectedItem && (
             <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
