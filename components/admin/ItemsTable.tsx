@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,20 @@ interface ItemsTableProps {
 
 export function ItemsTable({ initialItems }: ItemsTableProps) {
   const [items, setItems] = useState(initialItems);
+  const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return items;
+    return items.filter(
+      (item) =>
+        item.itemName.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
+    );
+  }, [items, search]);
+
+  const isFiltering = search.trim().length > 0;
 
   async function saveItem(item: InventoryItem) {
     setSavingId(item.itemId);
@@ -77,7 +90,28 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="items-search">Search items</Label>
+        <Input
+          id="items-search"
+          placeholder="Search by item or category"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        {isFiltering && (
+          <p className="text-sm text-slate-500">
+            {filteredItems.length} of {items.length} items
+          </p>
+        )}
+      </div>
+
+      {filteredItems.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-slate-200 p-6 text-sm text-slate-500">
+          {isFiltering ? "No items match your search." : "No items found."}
+        </p>
+      ) : (
+        <>
       <div className="hidden md:block">
         <Table>
           <TableHeader>
@@ -93,7 +127,7 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <TableRow key={item.itemId}>
                 <TableCell>
                   <Input
@@ -164,7 +198,7 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
       </div>
 
       <div className="space-y-4 md:hidden">
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <Card key={item.itemId}>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">{item.itemName || "Unnamed item"}</CardTitle>
@@ -253,6 +287,8 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
           </Card>
         ))}
       </div>
-    </>
+        </>
+      )}
+    </div>
   );
 }
