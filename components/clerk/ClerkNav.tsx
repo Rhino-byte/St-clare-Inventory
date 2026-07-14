@@ -9,6 +9,7 @@ import { ResponsiveNav } from "@/components/layout/ResponsiveNav";
 const links = [
   { href: "/clerk/stock-out", label: "Stock Out" },
   { href: "/clerk/stock-in", label: "Stock In" },
+  { href: "/clerk/daily", label: "Today" },
 ];
 
 export function ClerkNav() {

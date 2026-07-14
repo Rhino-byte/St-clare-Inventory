@@ -40,3 +40,23 @@ body {
   animation: loading-ellipsis 1.2s steps(1, end) infinite;
   content: "";
 }
+
+@media print {
+  header,
+  .report-controls {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .report-print-root {
+    break-inside: avoid;
+  }
+
+  .report-print-root section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

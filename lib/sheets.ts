@@ -10,6 +10,7 @@ import type {
   ItemUpdateRequest,
   Transaction,
 } from "./types";
+import { DEFAULT_STOCK_DESTINATION } from "./types";
 
 const INVENTORY_SHEET = "Sheet1";
 const TRANSACTIONS_SHEET = "Transactions";
@@ -102,7 +103,7 @@ export async function ensureAuxiliarySheets(): Promise<void> {
   if (!existing.has(TRANSACTIONS_SHEET)) {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${TRANSACTIONS_SHEET}!A1:G1`,
+      range: `${TRANSACTIONS_SHEET}!A1:H1`,
       valueInputOption: "RAW",
       requestBody: {
         values: [
@@ -114,10 +115,13 @@ export async function ensureAuxiliarySheets(): Promise<void> {
             "Quantity",
             "User Email",
             "Notes",
+            "Destination",
           ],
         ],
       },
     });
+  } else {
+    await ensureTransactionsDestinationColumn(sheets, spreadsheetId);
   }
 
   if (!existing.has(ALERT_LOG_SHEET)) {
@@ -128,6 +132,82 @@ export async function ensureAuxiliarySheets(): Promise<void> {
       requestBody: {
         values: [["Item ID", "Last Alerted At", "Stock At Alert"]],
       },
+    });
+  }
+}
+
+/** Ensure column H header exists and backfill blank destinations with Kitchen. */
+async function ensureTransactionsDestinationColumn(
+  sheets: ReturnType<typeof getSheetsClient>,
+  spreadsheetId: string
+): Promise<void> {
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${TRANSACTIONS_SHEET}!A1:H`,
+  });
+
+  const rows = response.data.values ?? [];
+  if (rows.length === 0) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${TRANSACTIONS_SHEET}!A1:H1`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [
+          [
+            "Timestamp",
+            "Item ID",
+            "Item Name",
+            "Type",
+            "Quantity",
+            "User Email",
+            "Notes",
+            "Destination",
+          ],
+        ],
+      },
+    });
+    return;
+  }
+
+  const header = [...(rows[0] ?? [])];
+  while (header.length < 8) {
+    header.push("");
+  }
+  if (header[7]?.trim() !== "Destination") {
+    header[7] = "Destination";
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${TRANSACTIONS_SHEET}!A1:H1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [header] },
+    });
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length === 0) {
+    return;
+  }
+
+  let needsBackfill = false;
+  const updatedRows = dataRows.map((row) => {
+    const next = [...row];
+    while (next.length < 8) {
+      next.push("");
+    }
+    if (!next[7]?.trim()) {
+      next[7] = DEFAULT_STOCK_DESTINATION;
+      needsBackfill = true;
+    }
+    return next;
+  });
+
+  if (needsBackfill) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${TRANSACTIONS_SHEET}!A2:H${dataRows.length + 1}`,
+      valueInputOption: "RAW",
+      requestBody: { values: updatedRows },
     });
   }
 }
@@ -191,7 +271,7 @@ export async function appendTransaction(transaction: Transaction): Promise<void>
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSpreadsheetId(),
-    range: `${TRANSACTIONS_SHEET}!A:G`,
+    range: `${TRANSACTIONS_SHEET}!A:H`,
     valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
@@ -204,6 +284,7 @@ export async function appendTransaction(transaction: Transaction): Promise<void>
           transaction.quantity,
           transaction.userEmail,
           transaction.notes,
+          transaction.destination,
         ],
       ],
     },
@@ -215,19 +296,26 @@ export async function getTransactions(): Promise<Transaction[]> {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: getSpreadsheetId(),
-    range: `${TRANSACTIONS_SHEET}!A2:G`,
+    range: `${TRANSACTIONS_SHEET}!A2:H`,
   });
 
   const rows = response.data.values ?? [];
-  return rows.map((row) => ({
-    timestamp: row[0] ?? "",
-    itemId: row[1] ?? "",
-    itemName: row[2] ?? "",
-    type: (row[3] === "out" ? "out" : "in") as Transaction["type"],
-    quantity: parseSheetNumber(row[4]),
-    userEmail: row[5] ?? "",
-    notes: row[6] ?? "",
-  }));
+  return rows.map((row) => {
+    const type = (row[3] === "out" ? "out" : "in") as Transaction["type"];
+    const destination =
+      row[7]?.trim() ||
+      (type === "out" ? DEFAULT_STOCK_DESTINATION : "");
+    return {
+      timestamp: row[0] ?? "",
+      itemId: row[1] ?? "",
+      itemName: row[2] ?? "",
+      type,
+      quantity: parseSheetNumber(row[4]),
+      userEmail: row[5] ?? "",
+      notes: row[6] ?? "",
+      destination,
+    };
+  });
 }
 
 export async function updateItemMetadata(

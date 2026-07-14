@@ -101,3 +101,60 @@ export function itemMovementTotals(transactions: Transaction[]) {
     }))
     .sort((a, b) => b.in + b.out - (a.in + a.out));
 }
+
+export type DailyStockItem = {
+  itemId: string;
+  itemName: string;
+  stockIn: number;
+  stockOut: number;
+  destination: string;
+};
+
+/** Per-item aggregates for a single calendar day (YYYY-MM-DD). */
+export function itemDailyMovement(
+  transactions: Transaction[],
+  dateKey: string
+): DailyStockItem[] {
+  const totals = new Map<
+    string,
+    {
+      itemName: string;
+      stockIn: number;
+      stockOut: number;
+      destinations: Set<string>;
+    }
+  >();
+
+  for (const tx of transactions) {
+    if (!tx.timestamp || tx.timestamp.slice(0, 10) !== dateKey) continue;
+
+    const current = totals.get(tx.itemId) ?? {
+      itemName: tx.itemName,
+      stockIn: 0,
+      stockOut: 0,
+      destinations: new Set<string>(),
+    };
+
+    if (tx.type === "in") {
+      current.stockIn += tx.quantity;
+    } else {
+      current.stockOut += tx.quantity;
+      const dest = tx.destination?.trim();
+      if (dest) {
+        current.destinations.add(dest);
+      }
+    }
+
+    totals.set(tx.itemId, current);
+  }
+
+  return Array.from(totals.entries())
+    .map(([itemId, values]) => ({
+      itemId,
+      itemName: values.itemName,
+      stockIn: values.stockIn,
+      stockOut: values.stockOut,
+      destination: Array.from(values.destinations).sort().join(", "),
+    }))
+    .sort((a, b) => a.itemName.localeCompare(b.itemName));
+}

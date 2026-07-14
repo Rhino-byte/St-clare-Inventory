@@ -6,10 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ItemSearchCombobox } from "@/components/clerk/ItemSearchCombobox";
 import { fetchInventory, submitStockMovement } from "@/lib/api-client";
 import { formatNumber } from "@/lib/utils";
-import type { InventoryItem } from "@/lib/types";
+import {
+  DEFAULT_STOCK_DESTINATION,
+  STOCK_DESTINATIONS,
+  type InventoryItem,
+  type StockDestination,
+} from "@/lib/types";
 
 interface StockMovementFormProps {
   type: "in" | "out";
@@ -22,6 +34,9 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
+  const [destination, setDestination] = useState<StockDestination>(
+    DEFAULT_STOCK_DESTINATION
+  );
 
   useEffect(() => {
     fetchInventory()
@@ -54,6 +69,7 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
         type,
         quantity: qty,
         notes,
+        ...(type === "out" ? { destination } : {}),
       });
       toast.success(
         `${type === "in" ? "Stock in" : "Stock out"} recorded for ${result.item.itemName}.`
@@ -63,6 +79,7 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
       );
       setQuantity("");
       setNotes("");
+      setDestination(DEFAULT_STOCK_DESTINATION);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Update failed");
     } finally {
@@ -110,6 +127,27 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
               required
             />
           </div>
+
+          {type === "out" && (
+            <div className="space-y-2">
+              <Label htmlFor="destination">Destination</Label>
+              <Select
+                value={destination}
+                onValueChange={(value) => setDestination(value as StockDestination)}
+              >
+                <SelectTrigger id="destination" className="w-full">
+                  <SelectValue placeholder="Select destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STOCK_DESTINATIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>

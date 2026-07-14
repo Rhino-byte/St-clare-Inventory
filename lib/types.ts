@@ -14,11 +14,23 @@ export interface InventoryItem {
 
 export type StockMovementType = "in" | "out";
 
+export const STOCK_DESTINATIONS = [
+  "Charity Work",
+  "Office",
+  "Kitchen",
+] as const;
+
+export type StockDestination = (typeof STOCK_DESTINATIONS)[number];
+
+export const DEFAULT_STOCK_DESTINATION: StockDestination = "Kitchen";
+
 export interface StockMovementRequest {
   itemId: string;
   type: StockMovementType;
   quantity: number;
   notes?: string;
+  /** Required for stock-out. Where items were taken. */
+  destination?: StockDestination;
 }
 
 export interface Transaction {
@@ -29,6 +41,8 @@ export interface Transaction {
   quantity: number;
   userEmail: string;
   notes: string;
+  /** Empty for stock-in. Kitchen default when reading blank stock-out rows. */
+  destination: string;
 }
 
 export interface AlertLogEntry {

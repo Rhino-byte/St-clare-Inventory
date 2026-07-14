@@ -39,7 +39,7 @@ Use this spreadsheet (or your own copy with the same columns):
 
 The app will auto-create these tabs if they do not exist:
 
-- `Transactions`
+- `Transactions` — audit log columns: Timestamp, Item ID, Item Name, Type, Quantity, User Email, Notes, **Destination** (stock-out: Charity Work / Office / Kitchen; blank stock-outs default to Kitchen)
 - `AlertLog`
 
 Share the spreadsheet with your service account email as **Editor**.
@@ -98,12 +98,14 @@ Open `http://localhost:3000`.
 | `/` | Public | Landing page |
 | `/admin/login` | Admin | Google sign-in + admin password |
 | `/admin/dashboard` | Admin | KPIs and low-stock list |
-| `/admin/analytics` | Admin | Charts |
+| `/admin/analytics` | Admin | Charts + daily stock by date |
+| `/admin/reports` | Admin | Period reports (weekly/monthly/4 months/custom) |
 | `/admin/items` | Admin | Edit items and reorder levels |
 | `/admin/alerts` | Admin | Test email + low-stock review |
 | `/clerk/login` | Staff | Google sign-in + staff password |
 | `/clerk/stock-out` | Staff | Record usage |
 | `/clerk/stock-in` | Staff | Record incoming stock |
+| `/clerk/daily` | Staff | Today's per-item stock in/out |
 
 ## Deploy to Vercel
 

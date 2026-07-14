@@ -7,7 +7,19 @@ import {
   updateStockMovement,
 } from "@/lib/sheets";
 import { validateStockMovement } from "@/lib/stock";
-import type { StockMovementRequest } from "@/lib/types";
+import {
+  DEFAULT_STOCK_DESTINATION,
+  STOCK_DESTINATIONS,
+  type StockDestination,
+  type StockMovementRequest,
+} from "@/lib/types";
+
+function isStockDestination(value: unknown): value is StockDestination {
+  return (
+    typeof value === "string" &&
+    (STOCK_DESTINATIONS as readonly string[]).includes(value)
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -23,6 +35,21 @@ export async function POST(request: Request) {
 
     if (body.type !== "in" && body.type !== "out") {
       return NextResponse.json({ error: "Invalid movement type." }, { status: 400 });
+    }
+
+    let destination = "";
+    if (body.type === "out") {
+      if (body.destination != null) {
+        if (!isStockDestination(body.destination)) {
+          return NextResponse.json(
+            { error: "Destination must be Charity Work, Office, or Kitchen." },
+            { status: 400 }
+          );
+        }
+        destination = body.destination;
+      } else {
+        destination = DEFAULT_STOCK_DESTINATION;
+      }
     }
 
     const item = await getInventoryItemById(body.itemId);
@@ -45,6 +72,7 @@ export async function POST(request: Request) {
       quantity: body.quantity,
       userEmail: email ?? uid,
       notes: body.notes?.trim() ?? "",
+      destination,
     });
 
     await clearAlertIfRecovered(updatedItem);

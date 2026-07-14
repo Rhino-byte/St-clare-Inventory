@@ -8,6 +8,7 @@ import { ResponsiveNav } from "@/components/layout/ResponsiveNav";
 const links = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/reports", label: "Reports" },
   { href: "/admin/items", label: "Items" },
   { href: "/admin/alerts", label: "Alerts" },
 ];

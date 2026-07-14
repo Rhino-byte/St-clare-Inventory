@@ -64,7 +64,7 @@ export function ResponsiveNav({
                 href={link.href}
                 className={cn(
                   "rounded-md px-3 py-2 text-sm font-medium",
-                  pathname === link.href
+                  pathname === link.href || pathname.startsWith(`${link.href}/`)
                     ? "bg-emerald-700 text-white"
                     : "text-slate-600 hover:bg-slate-100"
                 )}
@@ -87,7 +87,7 @@ export function ResponsiveNav({
                 href={link.href}
                 className={cn(
                   "rounded-md px-3 py-2.5 text-sm font-medium",
-                  pathname === link.href
+                  pathname === link.href || pathname.startsWith(`${link.href}/`)
                     ? "bg-emerald-700 text-white"
                     : "text-slate-600 hover:bg-slate-100"
                 )}

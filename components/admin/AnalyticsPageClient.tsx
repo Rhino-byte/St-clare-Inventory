@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AdminDailyStockSection } from "@/components/admin/AdminDailyStockSection";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import {
   StockMovementSummary,
@@ -77,6 +78,8 @@ export function AnalyticsPageClient() {
           <StockMovementSummary items={data.itemMovement} />
         </div>
       )}
+
+      <AdminDailyStockSection />
     </div>
   );
 }

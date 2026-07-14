@@ -1,3 +1,4 @@
+import type { DailyStockItem } from "@/lib/analytics";
 import type { InventoryItem } from "@/lib/types";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 
@@ -16,6 +17,7 @@ export async function submitStockMovement(payload: {
   type: "in" | "out";
   quantity: number;
   notes?: string;
+  destination?: "Charity Work" | "Office" | "Kitchen";
 }) {
   const headers = await getFirebaseAuthHeader();
   const response = await fetch("/api/stock", {
@@ -26,6 +28,45 @@ export async function submitStockMovement(payload: {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error ?? "Failed to update stock");
+  }
+  return data;
+}
+
+export async function fetchDailyStock(date?: string): Promise<{
+  date: string;
+  items: DailyStockItem[];
+}> {
+  const headers = await getFirebaseAuthHeader();
+  const query = date ? `?date=${encodeURIComponent(date)}` : "";
+  const response = await fetch(`/api/daily-stock${query}`, {
+    headers,
+    cache: "no-store",
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? "Failed to load daily stock");
+  }
+  return data;
+}
+
+export async function fetchReport(params: {
+  period: "weekly" | "monthly" | "4months" | "custom";
+  from?: string;
+  to?: string;
+}) {
+  const headers = await getFirebaseAuthHeader();
+  const search = new URLSearchParams({ period: params.period });
+  if (params.period === "custom") {
+    if (params.from) search.set("from", params.from);
+    if (params.to) search.set("to", params.to);
+  }
+  const response = await fetch(`/api/reports?${search.toString()}`, {
+    headers,
+    cache: "no-store",
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? "Failed to load report");
   }
   return data;
 }
