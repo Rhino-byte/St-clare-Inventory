@@ -91,12 +91,15 @@ export type ReportStockOutRow = {
   destination: string;
 };
 
-export type ReportClosingStockRow = {
+export type ReportStockBalanceRow = {
   itemId: string;
   itemName: string;
-  category: string;
   unit: string;
-  closingStock: number;
+  opening: number;
+  stockIn: number;
+  stockOut: number;
+  total: number;
+  closing: number;
 };
 
 export type ReportDestinationTotal = {
@@ -162,20 +165,68 @@ export function reportDestinationTotals(
     .sort((a, b) => b.quantity - a.quantity);
 }
 
-export function reportClosingStockRows(
-  items: InventoryItem[]
-): ReportClosingStockRow[] {
-  return [...items]
-    .map((item) => ({
-      itemId: item.itemId,
-      itemName: item.itemName,
-      category: item.category,
-      unit: item.unit,
-      closingStock: item.closingStock,
-    }))
+/**
+ * Period stock balance:
+ * Opening = sheet.openingStock + ins(before from) - outs(before from)
+ * Stock In/Out = sums in [from, to]
+ * Total = Opening + Stock In
+ * Closing = Total - Stock Out
+ */
+export function reportStockBalanceRows(
+  items: InventoryItem[],
+  allTransactions: Transaction[],
+  fromKey: string,
+  toKey: string
+): ReportStockBalanceRow[] {
+  const byItem = new Map<string, Transaction[]>();
+  for (const tx of allTransactions) {
+    if (!tx.timestamp || !tx.itemId) continue;
+    const list = byItem.get(tx.itemId) ?? [];
+    list.push(tx);
+    byItem.set(tx.itemId, list);
+  }
+
+  return items
+    .map((item) => {
+      const txs = byItem.get(item.itemId) ?? [];
+      let priorIn = 0;
+      let priorOut = 0;
+      let periodIn = 0;
+      let periodOut = 0;
+
+      for (const tx of txs) {
+        const day = tx.timestamp.slice(0, 10);
+        if (day < fromKey) {
+          if (tx.type === "in") priorIn += tx.quantity;
+          else priorOut += tx.quantity;
+        } else if (day >= fromKey && day <= toKey) {
+          if (tx.type === "in") periodIn += tx.quantity;
+          else periodOut += tx.quantity;
+        }
+      }
+
+      const opening = item.openingStock + priorIn - priorOut;
+      const total = opening + periodIn;
+      const closing = total - periodOut;
+
+      return {
+        itemId: item.itemId,
+        itemName: item.itemName,
+        unit: item.unit,
+        opening,
+        stockIn: periodIn,
+        stockOut: periodOut,
+        total,
+        closing,
+      };
+    })
     .sort((a, b) => {
-      if (a.closingStock > 0 && b.closingStock <= 0) return -1;
-      if (a.closingStock <= 0 && b.closingStock > 0) return 1;
+      const aActive =
+        a.stockIn !== 0 || a.stockOut !== 0 || a.opening !== 0 || a.closing !== 0;
+      const bActive =
+        b.stockIn !== 0 || b.stockOut !== 0 || b.opening !== 0 || b.closing !== 0;
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
       return a.itemName.localeCompare(b.itemName);
     });
 }

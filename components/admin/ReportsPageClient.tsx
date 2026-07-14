@@ -25,9 +25,9 @@ import {
 } from "@/components/ui/table";
 import { fetchReport } from "@/lib/api-client";
 import type {
-  ReportClosingStockRow,
   ReportDestinationTotal,
   ReportPeriod,
+  ReportStockBalanceRow,
   ReportStockInRow,
   ReportStockOutRow,
 } from "@/lib/reports";
@@ -45,21 +45,21 @@ const PIE_COLORS = ["#047857", "#b45309", "#1d4ed8", "#7c3aed", "#be123c"];
 type ReportSections = {
   stockIn: boolean;
   stockOut: boolean;
-  closingStock: boolean;
+  stockBalance: boolean;
   destinationChart: boolean;
 };
 
 const DEFAULT_SECTIONS: ReportSections = {
   stockIn: true,
   stockOut: true,
-  closingStock: true,
+  stockBalance: true,
   destinationChart: true,
 };
 
 const SECTION_OPTIONS: Array<{ key: keyof ReportSections; label: string }> = [
   { key: "stockIn", label: "Stock In" },
   { key: "stockOut", label: "Stock Out" },
-  { key: "closingStock", label: "Closing stock" },
+  { key: "stockBalance", label: "Stock balance" },
   { key: "destinationChart", label: "Destination chart" },
 ];
 
@@ -69,7 +69,7 @@ type ReportData = {
   to: string;
   stockIn: ReportStockInRow[];
   stockOut: ReportStockOutRow[];
-  closingStock: ReportClosingStockRow[];
+  stockBalance: ReportStockBalanceRow[];
   destinationTotals: ReportDestinationTotal[];
 };
 
@@ -168,29 +168,35 @@ function StockOutTable({ rows }: { rows: ReportStockOutRow[] }) {
   );
 }
 
-function ClosingStockTable({ rows }: { rows: ReportClosingStockRow[] }) {
+function StockBalanceTable({ rows }: { rows: ReportStockBalanceRow[] }) {
   if (!rows.length) {
     return <EmptyBlock message="No inventory items found." />;
   }
   return (
     <>
-      <div className="hidden md:block">
+      <div className="hidden overflow-x-auto md:block">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Item Name</TableHead>
-              <TableHead>Category</TableHead>
               <TableHead>Unit</TableHead>
-              <TableHead>Closing Stock</TableHead>
+              <TableHead>Opening</TableHead>
+              <TableHead>Stock In</TableHead>
+              <TableHead>Stock Out</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Closing</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.itemId}>
                 <TableCell className="font-medium">{row.itemName}</TableCell>
-                <TableCell>{row.category || "—"}</TableCell>
                 <TableCell>{row.unit || "—"}</TableCell>
-                <TableCell>{formatNumber(row.closingStock)}</TableCell>
+                <TableCell>{formatNumber(row.opening)}</TableCell>
+                <TableCell>{formatNumber(row.stockIn)}</TableCell>
+                <TableCell>{formatNumber(row.stockOut)}</TableCell>
+                <TableCell>{formatNumber(row.total)}</TableCell>
+                <TableCell>{formatNumber(row.closing)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -200,19 +206,30 @@ function ClosingStockTable({ rows }: { rows: ReportClosingStockRow[] }) {
         {rows.map((row) => (
           <Card key={row.itemId}>
             <CardContent className="space-y-2 p-4 text-sm">
-              <p className="font-medium text-slate-900">{row.itemName}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-slate-900">{row.itemName}</p>
+                <p className="text-slate-500">{row.unit || "—"}</p>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-slate-500">Category</p>
-                  <p className="font-medium">{row.category || "—"}</p>
+                  <p className="text-slate-500">Opening</p>
+                  <p className="font-medium">{formatNumber(row.opening)}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500">Unit</p>
-                  <p className="font-medium">{row.unit || "—"}</p>
+                  <p className="text-slate-500">Stock In</p>
+                  <p className="font-medium">{formatNumber(row.stockIn)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Stock Out</p>
+                  <p className="font-medium">{formatNumber(row.stockOut)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Total</p>
+                  <p className="font-medium">{formatNumber(row.total)}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-slate-500">Closing Stock</p>
-                  <p className="font-medium">{formatNumber(row.closingStock)}</p>
+                  <p className="text-slate-500">Closing</p>
+                  <p className="font-medium">{formatNumber(row.closing)}</p>
                 </div>
               </div>
             </CardContent>
@@ -234,7 +251,7 @@ export function ReportsPageClient() {
   const hasVisibleSection =
     sections.stockIn ||
     sections.stockOut ||
-    sections.closingStock ||
+    sections.stockBalance ||
     sections.destinationChart;
 
   function toggleSection(key: keyof ReportSections) {
@@ -413,12 +430,16 @@ export function ReportsPageClient() {
                 </section>
               )}
 
-              {sections.closingStock && (
+              {sections.stockBalance && (
                 <section className="space-y-3">
                   <h2 className="text-lg font-semibold text-slate-900">
-                    Closing stock (current)
+                    Stock balance
                   </h2>
-                  <ClosingStockTable rows={data.closingStock} />
+                  <p className="text-sm text-slate-500">
+                    Opening at period start, movements in range, Total = Opening +
+                    Stock In, Closing = Total − Stock Out.
+                  </p>
+                  <StockBalanceTable rows={data.stockBalance} />
                 </section>
               )}
 

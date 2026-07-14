@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/api-auth";
 import {
   filterTransactionsByDateRange,
-  reportClosingStockRows,
   reportDestinationTotals,
+  reportStockBalanceRows,
   reportStockInTotals,
   reportStockOutTotals,
   resolveReportRange,
@@ -57,7 +57,12 @@ export async function GET(request: Request) {
       to: range.to,
       stockIn: reportStockInTotals(filtered),
       stockOut: reportStockOutTotals(filtered),
-      closingStock: reportClosingStockRows(items),
+      stockBalance: reportStockBalanceRows(
+        items,
+        transactions,
+        range.from,
+        range.to
+      ),
       destinationTotals: reportDestinationTotals(filtered),
     });
   } catch (error) {
