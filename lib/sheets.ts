@@ -301,7 +301,10 @@ export async function getTransactions(): Promise<Transaction[]> {
 
   const rows = response.data.values ?? [];
   return rows.map((row) => {
-    const type = (row[3] === "out" ? "out" : "in") as Transaction["type"];
+    const rawType = String(row[3] ?? "")
+      .trim()
+      .toLowerCase();
+    const type = (rawType === "out" ? "out" : "in") as Transaction["type"];
     const destination =
       row[7]?.trim() ||
       (type === "out" ? DEFAULT_STOCK_DESTINATION : "");

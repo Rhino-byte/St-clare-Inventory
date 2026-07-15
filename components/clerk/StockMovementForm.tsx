@@ -6,19 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ItemSearchCombobox } from "@/components/clerk/ItemSearchCombobox";
 import { fetchInventory, submitStockMovement } from "@/lib/api-client";
 import { formatNumber } from "@/lib/utils";
 import {
   DEFAULT_STOCK_DESTINATION,
-  STOCK_DESTINATIONS,
   type InventoryItem,
   type StockDestination,
 } from "@/lib/types";
@@ -131,21 +123,18 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
           {type === "out" && (
             <div className="space-y-2">
               <Label htmlFor="destination">Destination</Label>
-              <Select
+              <select
+                id="destination"
                 value={destination}
-                onValueChange={(value) => setDestination(value as StockDestination)}
+                onChange={(event) =>
+                  setDestination(event.target.value as StockDestination)
+                }
+                className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
-                <SelectTrigger id="destination" className="w-full">
-                  <SelectValue placeholder="Select destination" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STOCK_DESTINATIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="Kitchen">Kitchen</option>
+                <option value="Office">Office</option>
+                <option value="Charity Work">Charity Work</option>
+              </select>
             </div>
           )}
 

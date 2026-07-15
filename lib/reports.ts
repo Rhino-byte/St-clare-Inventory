@@ -1,4 +1,10 @@
-import { format, subDays, differenceInCalendarDays, parseISO } from "date-fns";
+import { differenceInCalendarDays, parseISO } from "date-fns";
+import {
+  isDateKeyInRange,
+  rollingDateRange,
+  todayDateKey,
+  transactionDateKey,
+} from "@/lib/dates";
 import { DEFAULT_STOCK_DESTINATION } from "@/lib/types";
 import type { InventoryItem, Transaction } from "@/lib/types";
 
@@ -13,6 +19,8 @@ export const REPORT_PERIOD_DAYS: Record<Exclude<ReportPeriod, "custom">, number>
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_CUSTOM_RANGE_DAYS = 366 * 2;
 
+export { todayDateKey };
+
 export function isValidDateKey(value: string): boolean {
   if (!DATE_RE.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
@@ -24,18 +32,12 @@ export function isValidDateKey(value: string): boolean {
   );
 }
 
-export function todayDateKey(now = new Date()): string {
-  return format(now, "yyyy-MM-dd");
-}
-
 /** Inclusive rolling window: from = today - (days - 1), to = today. */
 export function presetDateRange(
   days: number,
   now = new Date()
 ): { from: string; to: string } {
-  const to = todayDateKey(now);
-  const from = format(subDays(now, days - 1), "yyyy-MM-dd");
-  return { from, to };
+  return rollingDateRange(days, now);
 }
 
 export function filterTransactionsByDateRange(
@@ -44,9 +46,8 @@ export function filterTransactionsByDateRange(
   toKey: string
 ): Transaction[] {
   return transactions.filter((tx) => {
-    if (!tx.timestamp) return false;
-    const day = tx.timestamp.slice(0, 10);
-    return day >= fromKey && day <= toKey;
+    const day = transactionDateKey(tx.timestamp);
+    return isDateKeyInRange(day, fromKey, toKey);
   });
 }
 
@@ -195,13 +196,14 @@ export function reportStockBalanceRows(
       let periodOut = 0;
 
       for (const tx of txs) {
-        const day = tx.timestamp.slice(0, 10);
+        const day = transactionDateKey(tx.timestamp);
+        if (!day) continue;
         if (day < fromKey) {
           if (tx.type === "in") priorIn += tx.quantity;
-          else priorOut += tx.quantity;
-        } else if (day >= fromKey && day <= toKey) {
+          else if (tx.type === "out") priorOut += tx.quantity;
+        } else if (day <= toKey) {
           if (tx.type === "in") periodIn += tx.quantity;
-          else periodOut += tx.quantity;
+          else if (tx.type === "out") periodOut += tx.quantity;
         }
       }
 

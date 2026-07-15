@@ -1,4 +1,10 @@
-import { eachDayOfInterval, format, isAfter, isSameDay, parseISO, subDays } from "date-fns";
+import {
+  dateKeysInclusive,
+  isDateKeyInRange,
+  rollingDateRange,
+  todayDateKey,
+  transactionDateKey,
+} from "@/lib/dates";
 import type { DashboardStats, InventoryItem, Transaction } from "./types";
 import { isLowStock, isOutOfStock } from "./stock";
 
@@ -6,12 +12,10 @@ export function buildDashboardStats(
   items: InventoryItem[],
   transactions: Transaction[]
 ): DashboardStats {
-  const today = new Date();
-  const todayMovements = transactions.filter((tx) => {
-    if (!tx.timestamp) return false;
-    const date = parseISO(tx.timestamp);
-    return isSameDay(date, today);
-  }).length;
+  const todayKey = todayDateKey();
+  const todayMovements = transactions.filter(
+    (tx) => transactionDateKey(tx.timestamp) === todayKey
+  ).length;
 
   return {
     totalItems: items.length,
@@ -21,15 +25,19 @@ export function buildDashboardStats(
   };
 }
 
+/**
+ * Inclusive app-timezone calendar window.
+ * days <= 0 → today only; days = 7 → today and the prior 6 days.
+ */
 export function filterTransactionsByDays(
   transactions: Transaction[],
   days: number
 ): Transaction[] {
-  const cutoff = subDays(new Date(), days);
+  const span = days <= 0 ? 1 : days;
+  const { from, to } = rollingDateRange(span);
   return transactions.filter((tx) => {
-    if (!tx.timestamp) return false;
-    const date = parseISO(tx.timestamp);
-    return isAfter(date, cutoff) || isSameDay(date, cutoff);
+    const day = transactionDateKey(tx.timestamp);
+    return isDateKeyInRange(day, from, to);
   });
 }
 
@@ -66,7 +74,8 @@ export function topConsumedItems(transactions: Transaction[], limit = 10) {
 export function dailyMovementTotals(transactions: Transaction[]) {
   const totals = new Map<string, { in: number; out: number }>();
   for (const tx of transactions) {
-    const day = tx.timestamp.slice(0, 10);
+    const day = transactionDateKey(tx.timestamp);
+    if (!day) continue;
     const current = totals.get(day) ?? { in: 0, out: 0 };
     if (tx.type === "in") current.in += tx.quantity;
     else current.out += tx.quantity;
@@ -126,7 +135,7 @@ export function itemDailyMovement(
   >();
 
   for (const tx of transactions) {
-    if (!tx.timestamp || tx.timestamp.slice(0, 10) !== dateKey) continue;
+    if (!tx.timestamp || transactionDateKey(tx.timestamp) !== dateKey) continue;
 
     const current = totals.get(tx.itemId) ?? {
       itemName: tx.itemName,
@@ -166,19 +175,15 @@ export type UserActivitySeries = {
 
 /**
  * Count of transactions per userEmail per calendar day.
- * Fills continuous days from earliest activity (or window) through today among filtered txs.
+ * Window matches filterTransactionsByDays (inclusive app-timezone days).
  */
 export function userActivityByDay(
   transactions: Transaction[],
   days: number
 ): UserActivitySeries {
-  const now = new Date();
-  // Align window with filterTransactionsByDays(cutoff = subDays(now, days)).
-  const start = days <= 0 ? now : subDays(now, days);
-
-  const dayKeys = eachDayOfInterval({ start, end: now }).map((d) =>
-    format(d, "yyyy-MM-dd")
-  );
+  const span = days <= 0 ? 1 : days;
+  const { from, to } = rollingDateRange(span);
+  const dayKeys = dateKeysInclusive(from, to);
 
   const usersSet = new Set<string>();
   const counts = new Map<string, Map<string, number>>();
@@ -189,7 +194,7 @@ export function userActivityByDay(
 
   for (const tx of transactions) {
     if (!tx.timestamp) continue;
-    const day = tx.timestamp.slice(0, 10);
+    const day = transactionDateKey(tx.timestamp);
     if (!counts.has(day)) continue;
     const user = tx.userEmail?.trim() || "Unknown";
     usersSet.add(user);

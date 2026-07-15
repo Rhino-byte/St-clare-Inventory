@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AdminDailyStockSection } from "@/components/admin/AdminDailyStockSection";
@@ -11,6 +10,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { fetchAnalytics } from "@/lib/api-client";
 import type { UserActivitySeries } from "@/lib/analytics";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
+import { todayDateKey } from "@/lib/dates";
 
 const RANGE_OPTIONS = [
   { label: "Today", value: 0 },
@@ -21,9 +21,7 @@ const RANGE_OPTIONS = [
 
 export function AnalyticsPageClient() {
   const [days, setDays] = useState(30);
-  const [selectedDate, setSelectedDate] = useState(() =>
-    format(new Date(), "yyyy-MM-dd")
-  );
+  const [selectedDate, setSelectedDate] = useState(() => todayDateKey());
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{
     categoryStock: Array<{ category: string; stock: number }>;

@@ -1,8 +1,8 @@
-import { format } from "date-fns";
 import { NextResponse } from "next/server";
 import { itemDailyMovement } from "@/lib/analytics";
 import { requireClerkOrAdmin } from "@/lib/auth/api-auth";
 import { isUidAllowed } from "@/lib/auth/roles";
+import { todayDateKey } from "@/lib/dates";
 import { getTransactions } from "@/lib/sheets";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const requestedDate = searchParams.get("date");
 
-    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const todayKey = todayDateKey();
     let dateKey = todayKey;
 
     if (isAdmin && requestedDate) {
