@@ -6,6 +6,7 @@ import {
   groupStockByCategory,
   itemMovementTotals,
   topConsumedItems,
+  userActivityByDay,
 } from "@/lib/analytics";
 import { requireAdmin } from "@/lib/auth/api-auth";
 import { getInventoryItems, getTransactions } from "@/lib/sheets";
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
       topConsumed: topConsumedItems(filtered),
       dailyMovement: dailyMovementTotals(filtered),
       itemMovement: itemMovementTotals(filtered),
+      userActivity: userActivityByDay(filtered, days),
       transactions: filtered,
     });
   } catch (error) {

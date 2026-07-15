@@ -1,16 +1,15 @@
 "use client";
 
+import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AdminDailyStockSection } from "@/components/admin/AdminDailyStockSection";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
-import {
-  StockMovementSummary,
-  type ItemMovementRow,
-} from "@/components/admin/StockMovementSummary";
+import { UserActivityChart } from "@/components/admin/UserActivityChart";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { fetchAnalytics } from "@/lib/api-client";
+import type { UserActivitySeries } from "@/lib/analytics";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 
 const RANGE_OPTIONS = [
@@ -22,11 +21,14 @@ const RANGE_OPTIONS = [
 
 export function AnalyticsPageClient() {
   const [days, setDays] = useState(30);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    format(new Date(), "yyyy-MM-dd")
+  );
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{
     categoryStock: Array<{ category: string; stock: number }>;
     topConsumed: Array<{ itemId: string; itemName: string; quantity: number }>;
-    itemMovement: ItemMovementRow[];
+    userActivity: UserActivitySeries;
   } | null>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function AnalyticsPageClient() {
         setData({
           categoryStock: analytics.categoryStock,
           topConsumed: analytics.topConsumed,
-          itemMovement: analytics.itemMovement,
+          userActivity: analytics.userActivity ?? { users: [], points: [] },
         });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to load analytics");
@@ -70,16 +72,18 @@ export function AnalyticsPageClient() {
           className="min-h-[40vh]"
         />
       ) : (
-        <div className="space-y-6">
-          <AnalyticsCharts
-            categoryStock={data.categoryStock}
-            topConsumed={data.topConsumed}
-          />
-          <StockMovementSummary items={data.itemMovement} />
-        </div>
+        <AnalyticsCharts
+          categoryStock={data.categoryStock}
+          topConsumed={data.topConsumed}
+        />
       )}
 
-      <AdminDailyStockSection />
+      <AdminDailyStockSection
+        date={selectedDate}
+        onDateChange={setSelectedDate}
+      />
+
+      {!loading && data && <UserActivityChart data={data.userActivity} />}
     </div>
   );
 }

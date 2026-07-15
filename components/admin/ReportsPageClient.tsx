@@ -172,71 +172,38 @@ function StockBalanceTable({ rows }: { rows: ReportStockBalanceRow[] }) {
   if (!rows.length) {
     return <EmptyBlock message="No inventory items found." />;
   }
+
   return (
-    <>
-      <div className="hidden overflow-x-auto md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item Name</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead>Opening</TableHead>
-              <TableHead>Stock In</TableHead>
-              <TableHead>Stock Out</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Closing</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.itemId}>
-                <TableCell className="font-medium">{row.itemName}</TableCell>
-                <TableCell>{row.unit || "—"}</TableCell>
-                <TableCell>{formatNumber(row.opening)}</TableCell>
-                <TableCell>{formatNumber(row.stockIn)}</TableCell>
-                <TableCell>{formatNumber(row.stockOut)}</TableCell>
-                <TableCell>{formatNumber(row.total)}</TableCell>
-                <TableCell>{formatNumber(row.closing)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="space-y-3 md:hidden">
-        {rows.map((row) => (
-          <Card key={row.itemId}>
-            <CardContent className="space-y-2 p-4 text-sm">
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-slate-900">{row.itemName}</p>
-                <p className="text-slate-500">{row.unit || "—"}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-slate-500">Opening</p>
-                  <p className="font-medium">{formatNumber(row.opening)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Stock In</p>
-                  <p className="font-medium">{formatNumber(row.stockIn)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Stock Out</p>
-                  <p className="font-medium">{formatNumber(row.stockOut)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Total</p>
-                  <p className="font-medium">{formatNumber(row.total)}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-slate-500">Closing</p>
-                  <p className="font-medium">{formatNumber(row.closing)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </>
+    <div className="stock-balance-ledger-wrap w-full overflow-x-auto">
+      <table className="stock-balance-ledger w-full min-w-[40rem] border-collapse text-sm">
+        <thead>
+          <tr>
+            <th scope="col">Item Name</th>
+            <th scope="col">Unit</th>
+            <th scope="col">Opening</th>
+            <th scope="col">Stock In</th>
+            <th scope="col">Total</th>
+            <th scope="col">Stock Out</th>
+            <th scope="col">Closing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.itemId}>
+              <td className="stock-balance-item">
+                <span className="stock-balance-no">{index + 1}.</span> {row.itemName}
+              </td>
+              <td className="stock-balance-num">{row.unit || "—"}</td>
+              <td className="stock-balance-num">{formatNumber(row.opening)}</td>
+              <td className="stock-balance-num">{formatNumber(row.stockIn)}</td>
+              <td className="stock-balance-num">{formatNumber(row.total)}</td>
+              <td className="stock-balance-num">{formatNumber(row.stockOut)}</td>
+              <td className="stock-balance-num">{formatNumber(row.closing)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -436,8 +403,8 @@ export function ReportsPageClient() {
                     Stock balance
                   </h2>
                   <p className="text-sm text-slate-500">
-                    Opening at period start, movements in range, Total = Opening +
-                    Stock In, Closing = Total − Stock Out.
+                    Opening → Stock In → Total (Opening + Stock In) → Stock Out →
+                    Closing (Total − Stock Out).
                   </p>
                   <StockBalanceTable rows={data.stockBalance} />
                 </section>

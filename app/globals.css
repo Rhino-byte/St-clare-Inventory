@@ -41,6 +41,44 @@ body {
   content: "";
 }
 
+/* Ledger-style stock balance table (screen + print) */
+.stock-balance-ledger {
+  border: 1.5px solid #0f172a;
+  color: #0f172a;
+  background: #fff;
+}
+
+.stock-balance-ledger th,
+.stock-balance-ledger td {
+  border: 1px solid #0f172a;
+  padding: 0.45rem 0.55rem;
+  vertical-align: middle;
+}
+
+.stock-balance-ledger thead th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-align: center;
+  background: #fff;
+}
+
+.stock-balance-ledger .stock-balance-item {
+  text-align: left;
+  font-weight: 500;
+}
+
+.stock-balance-ledger .stock-balance-no {
+  color: #334155;
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+.stock-balance-ledger .stock-balance-num {
+  text-align: center;
+  white-space: nowrap;
+}
+
 @media print {
   header,
   .report-controls {
@@ -52,10 +90,38 @@ body {
   }
 
   .report-print-root {
-    break-inside: avoid;
+    break-inside: auto;
   }
 
   .report-print-root section {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .stock-balance-ledger-wrap {
+    overflow: visible !important;
+  }
+
+  .stock-balance-ledger {
+    border-color: #000;
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 11px;
+  }
+
+  .stock-balance-ledger th,
+  .stock-balance-ledger td {
+    border-color: #000;
+    padding: 0.3rem 0.35rem;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .stock-balance-ledger thead {
+    display: table-header-group;
+  }
+
+  .stock-balance-ledger tr {
     break-inside: avoid;
     page-break-inside: avoid;
   }

@@ -1,4 +1,4 @@
-import { isAfter, isSameDay, parseISO, subDays } from "date-fns";
+import { eachDayOfInterval, format, isAfter, isSameDay, parseISO, subDays } from "date-fns";
 import type { DashboardStats, InventoryItem, Transaction } from "./types";
 import { isLowStock, isOutOfStock } from "./stock";
 
@@ -157,4 +157,55 @@ export function itemDailyMovement(
       destination: Array.from(values.destinations).sort().join(", "),
     }))
     .sort((a, b) => a.itemName.localeCompare(b.itemName));
+}
+
+export type UserActivitySeries = {
+  users: string[];
+  points: Array<Record<string, string | number>>;
+};
+
+/**
+ * Count of transactions per userEmail per calendar day.
+ * Fills continuous days from earliest activity (or window) through today among filtered txs.
+ */
+export function userActivityByDay(
+  transactions: Transaction[],
+  days: number
+): UserActivitySeries {
+  const now = new Date();
+  // Align window with filterTransactionsByDays(cutoff = subDays(now, days)).
+  const start = days <= 0 ? now : subDays(now, days);
+
+  const dayKeys = eachDayOfInterval({ start, end: now }).map((d) =>
+    format(d, "yyyy-MM-dd")
+  );
+
+  const usersSet = new Set<string>();
+  const counts = new Map<string, Map<string, number>>();
+
+  for (const day of dayKeys) {
+    counts.set(day, new Map());
+  }
+
+  for (const tx of transactions) {
+    if (!tx.timestamp) continue;
+    const day = tx.timestamp.slice(0, 10);
+    if (!counts.has(day)) continue;
+    const user = tx.userEmail?.trim() || "Unknown";
+    usersSet.add(user);
+    const dayMap = counts.get(day)!;
+    dayMap.set(user, (dayMap.get(user) ?? 0) + 1);
+  }
+
+  const users = Array.from(usersSet).sort((a, b) => a.localeCompare(b));
+  const points = dayKeys.map((date) => {
+    const row: Record<string, string | number> = { date };
+    const dayMap = counts.get(date)!;
+    for (const user of users) {
+      row[user] = dayMap.get(user) ?? 0;
+    }
+    return row;
+  });
+
+  return { users, points };
 }
