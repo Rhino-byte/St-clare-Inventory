@@ -134,6 +134,7 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
                 <option value="Kitchen">Kitchen</option>
                 <option value="Office">Office</option>
                 <option value="Charity Work">Charity Work</option>
+                <option value="House Keeping">House Keeping</option>
               </select>
             </div>
           )}

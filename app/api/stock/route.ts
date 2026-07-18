@@ -42,7 +42,10 @@ export async function POST(request: Request) {
       if (body.destination != null) {
         if (!isStockDestination(body.destination)) {
           return NextResponse.json(
-            { error: "Destination must be Charity Work, Office, or Kitchen." },
+            {
+              error:
+                "Destination must be Charity Work, Office, Kitchen, or House Keeping.",
+            },
             { status: 400 }
           );
         }

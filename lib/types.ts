@@ -18,6 +18,7 @@ export const STOCK_DESTINATIONS = [
   "Charity Work",
   "Office",
   "Kitchen",
+  "House Keeping",
 ] as const;
 
 export type StockDestination = (typeof STOCK_DESTINATIONS)[number];

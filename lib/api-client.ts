@@ -17,7 +17,7 @@ export async function submitStockMovement(payload: {
   type: "in" | "out";
   quantity: number;
   notes?: string;
-  destination?: "Charity Work" | "Office" | "Kitchen";
+  destination?: "Charity Work" | "Office" | "Kitchen" | "House Keeping";
 }) {
   const headers = await getFirebaseAuthHeader();
   const response = await fetch("/api/stock", {
