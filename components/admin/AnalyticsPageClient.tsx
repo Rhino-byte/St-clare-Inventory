@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { AdminDailyStockSection } from "@/components/admin/AdminDailyStockSection";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import { UserActivityChart } from "@/components/admin/UserActivityChart";
+import { WeeklyItemUsageChart } from "@/components/admin/WeeklyItemUsageChart";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
-import { fetchAnalytics } from "@/lib/api-client";
-import type { UserActivitySeries } from "@/lib/analytics";
+import { fetchAnalytics, type AnalyticsResponse } from "@/lib/api-client";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 import { todayDateKey } from "@/lib/dates";
 
@@ -23,11 +23,7 @@ export function AnalyticsPageClient() {
   const [days, setDays] = useState(30);
   const [selectedDate, setSelectedDate] = useState(() => todayDateKey());
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<{
-    categoryStock: Array<{ category: string; stock: number }>;
-    topConsumed: Array<{ itemId: string; itemName: string; quantity: number }>;
-    userActivity: UserActivitySeries;
-  } | null>(null);
+  const [data, setData] = useState<AnalyticsResponse | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -35,13 +31,10 @@ export function AnalyticsPageClient() {
       try {
         const headers = await getFirebaseAuthHeader();
         const analytics = await fetchAnalytics(days, headers);
-        setData({
-          categoryStock: analytics.categoryStock,
-          topConsumed: analytics.topConsumed,
-          userActivity: analytics.userActivity ?? { users: [], points: [] },
-        });
+        setData(analytics);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to load analytics");
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -70,10 +63,33 @@ export function AnalyticsPageClient() {
           className="min-h-[40vh]"
         />
       ) : (
-        <AnalyticsCharts
-          categoryStock={data.categoryStock}
-          topConsumed={data.topConsumed}
-        />
+        <>
+          <AnalyticsCharts
+            categories={data.categories ?? []}
+            dailyTopByCategory={data.dailyTopByCategory ?? {}}
+            topConsumed={data.topConsumed}
+            periodComparison={
+              data.periodComparison ?? {
+                currentFrom: "",
+                currentTo: "",
+                previousFrom: "",
+                previousTo: "",
+                points: [],
+              }
+            }
+          />
+
+          <WeeklyItemUsageChart
+            inventoryOptions={data.inventoryOptions ?? []}
+            itemWeeklySeries={
+              data.itemWeeklySeries ?? {
+                itemIds: [],
+                itemNames: {},
+                points: [],
+              }
+            }
+          />
+        </>
       )}
 
       <AdminDailyStockSection
@@ -81,7 +97,11 @@ export function AnalyticsPageClient() {
         onDateChange={setSelectedDate}
       />
 
-      {!loading && data && <UserActivityChart data={data.userActivity} />}
+      {!loading && data && (
+        <UserActivityChart
+          data={data.userActivity ?? { users: [], points: [] }}
+        />
+      )}
     </div>
   );
 }

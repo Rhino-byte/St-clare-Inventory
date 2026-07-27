@@ -68,6 +68,22 @@ export function rollingDateRange(
   return { from: addCalendarDays(to, -(days - 1)), to };
 }
 
+/**
+ * Equal-length window ending the day before the current rolling `from`.
+ * Example: current last 7 days → previous 7 days immediately before that.
+ */
+export function previousRollingDateRange(
+  days: number,
+  now = new Date()
+): { from: string; to: string } {
+  const span = days <= 1 ? 1 : days;
+  const { from } = rollingDateRange(span, now);
+  return {
+    from: addCalendarDays(from, -span),
+    to: addCalendarDays(from, -1),
+  };
+}
+
 export function isDateKeyInRange(
   dateKey: string,
   fromKey: string,
