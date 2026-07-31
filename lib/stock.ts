@@ -14,6 +14,25 @@ export function parseSheetNumber(value: string | number | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/** Whole number for Google Sheets numeric cells. */
+export function toSheetInteger(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value);
+}
+
+/**
+ * Write Item ID as a number when it is a plain integer string without leading zeros;
+ * otherwise keep text (codes, letters, or padded IDs like 001).
+ */
+export function toSheetItemId(itemId: string): string | number {
+  const trimmed = itemId.trim();
+  if (/^(0|[1-9]\d*)$/.test(trimmed)) {
+    const asNumber = Number(trimmed);
+    if (Number.isSafeInteger(asNumber)) return asNumber;
+  }
+  return trimmed;
+}
+
 export function parseOptionalNumber(
   value: string | number | undefined
 ): number | null {

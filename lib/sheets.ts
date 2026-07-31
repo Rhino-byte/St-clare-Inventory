@@ -3,6 +3,8 @@ import {
   calculateClosingStock,
   parseOptionalNumber,
   parseSheetNumber,
+  toSheetInteger,
+  toSheetItemId,
 } from "./stock";
 import type {
   AlertLogEntry,
@@ -45,8 +47,8 @@ function getSheetsClient() {
 }
 
 function rowToItem(row: string[], rowIndex: number): InventoryItem | null {
-  const itemId = row[0]?.trim();
-  const itemName = row[1]?.trim();
+  const itemId = String(row[0] ?? "").trim();
+  const itemName = String(row[1] ?? "").trim();
   if (!itemId || !itemName) return null;
 
   const openingStock = parseSheetNumber(row[4]);
@@ -64,14 +66,14 @@ function rowToItem(row: string[], rowIndex: number): InventoryItem | null {
     rowIndex,
     itemId,
     itemName,
-    category: row[2]?.trim() ?? "",
-    unit: row[3]?.trim() ?? "",
+    category: String(row[2] ?? "").trim(),
+    unit: String(row[3] ?? "").trim(),
     openingStock,
     stockIn,
     stockOut,
     closingStock,
     reorderLevel: parseOptionalNumber(row[8]),
-    notes: row[9]?.trim() ?? "",
+    notes: String(row[9] ?? "").trim(),
   };
 }
 
@@ -255,9 +257,15 @@ export async function updateStockMovement(
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `${INVENTORY_SHEET}!F${item.rowIndex}:H${item.rowIndex}`,
-    valueInputOption: "RAW",
+    valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[stockIn, stockOut, closingStock]],
+      values: [
+        [
+          toSheetInteger(stockIn),
+          toSheetInteger(stockOut),
+          toSheetInteger(closingStock),
+        ],
+      ],
     },
   });
 
@@ -276,16 +284,16 @@ export async function appendTransaction(transaction: Transaction): Promise<void>
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSpreadsheetId(),
     range: `${TRANSACTIONS_SHEET}!A:H`,
-    valueInputOption: "RAW",
+    valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
       values: [
         [
           transaction.timestamp,
-          transaction.itemId,
+          toSheetItemId(transaction.itemId),
           transaction.itemName,
           transaction.type,
-          transaction.quantity,
+          toSheetInteger(transaction.quantity),
           transaction.userEmail,
           transaction.notes,
           transaction.destination,
@@ -310,16 +318,16 @@ export async function getTransactions(): Promise<Transaction[]> {
       .toLowerCase();
     const type = (rawType === "out" ? "out" : "in") as Transaction["type"];
     const destination =
-      row[7]?.trim() ||
+      String(row[7] ?? "").trim() ||
       (type === "out" ? DEFAULT_STOCK_DESTINATION : "");
     return {
-      timestamp: row[0] ?? "",
-      itemId: row[1] ?? "",
-      itemName: row[2] ?? "",
+      timestamp: String(row[0] ?? ""),
+      itemId: String(row[1] ?? "").trim(),
+      itemName: String(row[2] ?? ""),
       type,
       quantity: parseSheetNumber(row[4]),
-      userEmail: row[5] ?? "",
-      notes: row[6] ?? "",
+      userEmail: String(row[5] ?? ""),
+      notes: String(row[6] ?? ""),
       destination,
     };
   });
@@ -354,18 +362,20 @@ export async function updateItemMetadata(
   await sheets.spreadsheets.values.update({
     spreadsheetId: getSpreadsheetId(),
     range: `${INVENTORY_SHEET}!B${item.rowIndex}:J${item.rowIndex}`,
-    valueInputOption: "RAW",
+    valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [
         [
           nextItem.itemName,
           nextItem.category,
           nextItem.unit,
-          nextItem.openingStock,
-          nextItem.stockIn,
-          nextItem.stockOut,
-          nextItem.closingStock,
-          nextItem.reorderLevel ?? "",
+          toSheetInteger(nextItem.openingStock),
+          toSheetInteger(nextItem.stockIn),
+          toSheetInteger(nextItem.stockOut),
+          toSheetInteger(nextItem.closingStock),
+          nextItem.reorderLevel === null
+            ? ""
+            : toSheetInteger(nextItem.reorderLevel),
           nextItem.notes,
         ],
       ],
@@ -385,8 +395,8 @@ export async function getAlertLogs(): Promise<AlertLogEntry[]> {
 
   const rows = response.data.values ?? [];
   return rows.map((row) => ({
-    itemId: row[0] ?? "",
-    lastAlertedAt: row[1] ?? "",
+    itemId: String(row[0] ?? "").trim(),
+    lastAlertedAt: String(row[1] ?? ""),
     stockAtAlert: parseSheetNumber(row[2]),
   }));
 }
@@ -398,14 +408,20 @@ export async function upsertAlertLog(entry: AlertLogEntry): Promise<void> {
   const logs = await getAlertLogs();
   const existingIndex = logs.findIndex((log) => log.itemId === entry.itemId);
 
+  const rowValues = [
+    toSheetItemId(entry.itemId),
+    entry.lastAlertedAt,
+    toSheetInteger(entry.stockAtAlert),
+  ];
+
   if (existingIndex === -1) {
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: `${ALERT_LOG_SHEET}!A:C`,
-      valueInputOption: "RAW",
+      valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
-        values: [[entry.itemId, entry.lastAlertedAt, entry.stockAtAlert]],
+        values: [rowValues],
       },
     });
     return;
@@ -415,9 +431,9 @@ export async function upsertAlertLog(entry: AlertLogEntry): Promise<void> {
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `${ALERT_LOG_SHEET}!A${rowIndex}:C${rowIndex}`,
-    valueInputOption: "RAW",
+    valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[entry.itemId, entry.lastAlertedAt, entry.stockAtAlert]],
+      values: [rowValues],
     },
   });
 }
