@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AdminDailyStockSection } from "@/components/admin/AdminDailyStockSection";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import { UserActivityChart } from "@/components/admin/UserActivityChart";
 import { WeeklyItemUsageChart } from "@/components/admin/WeeklyItemUsageChart";
@@ -10,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { fetchAnalytics, type AnalyticsResponse } from "@/lib/api-client";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
-import { todayDateKey } from "@/lib/dates";
 
 const RANGE_OPTIONS = [
   { label: "Today", value: 0 },
@@ -21,7 +19,6 @@ const RANGE_OPTIONS = [
 
 export function AnalyticsPageClient() {
   const [days, setDays] = useState(30);
-  const [selectedDate, setSelectedDate] = useState(() => todayDateKey());
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
 
@@ -91,11 +88,6 @@ export function AnalyticsPageClient() {
           />
         </>
       )}
-
-      <AdminDailyStockSection
-        date={selectedDate}
-        onDateChange={setSelectedDate}
-      />
 
       {!loading && data && (
         <UserActivityChart

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
+import { AdminDailyStockSection } from "@/components/admin/AdminDailyStockSection";
 import { LowStockTable } from "@/components/admin/LowStockTable";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,13 @@ import {
 import { LoadingState } from "@/components/ui/loading-state";
 import { fetchAnalytics } from "@/lib/api-client";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
+import { todayDateKey } from "@/lib/dates";
 import type { DashboardStats, InventoryItem } from "@/lib/types";
 
 export function DashboardPageClient() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
+  const [selectedDate, setSelectedDate] = useState(() => todayDateKey());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,6 +81,11 @@ export function DashboardPageClient() {
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Low stock items</h2>
         <LowStockTable items={lowStockItems} />
       </div>
+
+      <AdminDailyStockSection
+        date={selectedDate}
+        onDateChange={setSelectedDate}
+      />
     </div>
   );
 }
