@@ -32,17 +32,18 @@ export async function GET(request: Request) {
 
     const filtered = filterTransactionsByDays(transactions, days);
     const currentRange = rollingDateRange(span);
-    const weeklyRange = rollingDateRange(7);
+    const usageSpan = days <= 0 ? 7 : span;
+    const usageRange = rollingDateRange(usageSpan);
 
     const options = inventoryOptions(items);
-    const weeklySeries = itemDailyOutSeries(
+    const usageSeries = itemDailyOutSeries(
       transactions,
-      weeklyRange.from,
-      weeklyRange.to,
+      usageRange.from,
+      usageRange.to,
       options.map((option) => option.itemId)
     );
     for (const option of options) {
-      weeklySeries.itemNames[option.itemId] = option.itemName;
+      usageSeries.itemNames[option.itemId] = option.itemName;
     }
 
     return NextResponse.json({
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
       ),
       periodComparison: periodOutComparisonSeries(transactions, days),
       inventoryOptions: options,
-      itemWeeklySeries: weeklySeries,
+      itemUsageSeries: usageSeries,
     });
   } catch (error) {
     if (error instanceof Response) return error;

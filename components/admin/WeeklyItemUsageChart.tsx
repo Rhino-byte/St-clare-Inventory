@@ -24,26 +24,50 @@ const LINE_COLORS = [
   "#be123c",
 ];
 
+function usageCopy(days: number): { title: string; description: string } {
+  if (days >= 90) {
+    return {
+      title: "Quarterly item usage",
+      description:
+        "Compare stock-out for selected items over the last 90 days.",
+    };
+  }
+  if (days >= 30) {
+    return {
+      title: "Monthly item usage",
+      description:
+        "Compare stock-out for selected items over the last 30 days.",
+    };
+  }
+  return {
+    title: "Weekly item usage",
+    description: "Compare stock-out for selected items over the last 7 days.",
+  };
+}
+
 interface WeeklyItemUsageChartProps {
+  days: number;
   inventoryOptions: InventoryOption[];
-  itemWeeklySeries: ItemDailyOutSeries;
+  itemUsageSeries: ItemDailyOutSeries;
 }
 
 export function WeeklyItemUsageChart({
+  days,
   inventoryOptions,
-  itemWeeklySeries,
+  itemUsageSeries,
 }: WeeklyItemUsageChartProps) {
   const isMobile = useIsMobile();
+  const { title, description } = usageCopy(days);
 
   const defaultIds = useMemo(() => {
-    const withActivity = itemWeeklySeries.itemIds.filter((id) =>
-      itemWeeklySeries.points.some((point) => Number(point[id] ?? 0) > 0)
+    const withActivity = itemUsageSeries.itemIds.filter((id) =>
+      itemUsageSeries.points.some((point) => Number(point[id] ?? 0) > 0)
     );
     const pool = withActivity.length
       ? withActivity
       : inventoryOptions.map((option) => option.itemId);
     return pool.slice(0, 3);
-  }, [inventoryOptions, itemWeeklySeries]);
+  }, [inventoryOptions, itemUsageSeries]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>(defaultIds);
 
@@ -54,7 +78,7 @@ export function WeeklyItemUsageChart({
   const chartItems = selectedIds.map((id) => ({
     itemId: id,
     itemName:
-      itemWeeklySeries.itemNames[id] ??
+      itemUsageSeries.itemNames[id] ??
       inventoryOptions.find((option) => option.itemId === id)?.itemName ??
       id,
   }));
@@ -62,10 +86,8 @@ export function WeeklyItemUsageChart({
   return (
     <Card>
       <CardHeader className="space-y-3">
-        <CardTitle>Weekly item usage</CardTitle>
-        <p className="text-sm font-normal text-slate-500">
-          Compare stock-out for selected items over the last 7 days.
-        </p>
+        <CardTitle>{title}</CardTitle>
+        <p className="text-sm font-normal text-slate-500">{description}</p>
         <ItemMultiSelect
           options={inventoryOptions}
           value={selectedIds}
@@ -79,7 +101,7 @@ export function WeeklyItemUsageChart({
           </p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={itemWeeklySeries.points}>
+            <LineChart data={itemUsageSeries.points}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"

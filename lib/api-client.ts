@@ -28,7 +28,7 @@ export type AnalyticsResponse = {
   dailyTopByCategory: DailyTopByCategory;
   periodComparison: PeriodComparisonSeries;
   inventoryOptions: InventoryOption[];
-  itemWeeklySeries: ItemDailyOutSeries;
+  itemUsageSeries: ItemDailyOutSeries;
 };
 
 export async function fetchInventory(): Promise<InventoryItem[]> {

@@ -77,9 +77,10 @@ export function AnalyticsPageClient() {
           />
 
           <WeeklyItemUsageChart
+            days={days <= 0 ? 7 : days}
             inventoryOptions={data.inventoryOptions ?? []}
-            itemWeeklySeries={
-              data.itemWeeklySeries ?? {
+            itemUsageSeries={
+              data.itemUsageSeries ?? {
                 itemIds: [],
                 itemNames: {},
                 points: [],
