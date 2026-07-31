@@ -10,7 +10,7 @@ import {
   itemMovementTotals,
   listCategories,
   periodOutComparisonSeries,
-  topConsumedItems,
+  topStockInItems,
   userActivityByDay,
 } from "@/lib/analytics";
 import { requireAdmin } from "@/lib/auth/api-auth";
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       stats: buildDashboardStats(items, transactions),
       lowStockItems: items.filter(isLowStock),
       categoryStock: groupStockByCategory(items),
-      topConsumed: topConsumedItems(filtered),
+      topStockIn: topStockInItems(filtered),
       dailyMovement: dailyMovementTotals(filtered),
       itemMovement: itemMovementTotals(filtered),
       userActivity: userActivityByDay(filtered, days),

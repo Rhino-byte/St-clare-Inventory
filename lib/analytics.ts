@@ -93,10 +93,10 @@ export function inventoryOptions(items: InventoryItem[]): InventoryOption[] {
     .sort((a, b) => a.itemName.localeCompare(b.itemName));
 }
 
-export function topConsumedItems(transactions: Transaction[], limit = 10) {
+export function topStockInItems(transactions: Transaction[], limit = 10) {
   const totals = new Map<string, { itemName: string; quantity: number }>();
   for (const tx of transactions) {
-    if (tx.type !== "out") continue;
+    if (tx.type !== "in") continue;
     const current = totals.get(tx.itemId) ?? {
       itemName: tx.itemName,
       quantity: 0,

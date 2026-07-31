@@ -53,8 +53,12 @@ function rowToItem(row: string[], rowIndex: number): InventoryItem | null {
   const stockIn = parseSheetNumber(row[5]);
   const stockOut = parseSheetNumber(row[6]);
   const closingFromSheet = parseOptionalNumber(row[7]);
-  const closingStock =
-    closingFromSheet ?? calculateClosingStock(openingStock, stockIn, stockOut);
+  const computedClosing = calculateClosingStock(openingStock, stockIn, stockOut);
+  // Prefer sheet value when present, but never expose a negative closing stock.
+  const closingStock = Math.max(
+    0,
+    closingFromSheet !== null ? closingFromSheet : computedClosing
+  );
 
   return {
     rowIndex,

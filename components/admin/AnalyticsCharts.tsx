@@ -33,14 +33,14 @@ const LINE_COLORS = [
 interface AnalyticsChartsProps {
   categories: string[];
   dailyTopByCategory: DailyTopByCategory;
-  topConsumed: Array<{ itemId: string; itemName: string; quantity: number }>;
+  topStockIn: Array<{ itemId: string; itemName: string; quantity: number }>;
   periodComparison: PeriodComparisonSeries;
 }
 
 export function AnalyticsCharts({
   categories,
   dailyTopByCategory,
-  topConsumed,
+  topStockIn,
   periodComparison,
 }: AnalyticsChartsProps) {
   const isMobile = useIsMobile();
@@ -119,16 +119,19 @@ export function AnalyticsCharts({
 
         <Card>
           <CardHeader>
-            <CardTitle>Top consumed items</CardTitle>
+            <CardTitle>Top stock-in items</CardTitle>
+            <p className="text-sm font-normal text-slate-500">
+              Highest stock-in quantities in the selected range (top 10).
+            </p>
           </CardHeader>
           <CardContent className="h-64 sm:h-80">
-            {topConsumed.length === 0 ? (
+            {topStockIn.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-200 p-6 text-sm text-slate-500">
-                No stock-out movements in this period.
+                No stock-in movements in this period.
               </p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topConsumed} layout="vertical">
+                <BarChart data={topStockIn} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
                   <YAxis
@@ -138,7 +141,7 @@ export function AnalyticsCharts({
                     tick={{ fontSize: isMobile ? 11 : 12 }}
                   />
                   <Tooltip />
-                  <Bar dataKey="quantity" fill="#b45309" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="quantity" fill="#047857" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -181,8 +184,8 @@ export function AnalyticsCharts({
                 <Bar
                   dataKey="previous"
                   name="Previous period"
-                  fill="#94a3b8"
-                  fillOpacity={0.35}
+                  fill="#1d4ed8"
+                  fillOpacity={0.45}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

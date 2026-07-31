@@ -13,7 +13,7 @@ export type AnalyticsResponse = {
   stats: DashboardStats;
   lowStockItems: InventoryItem[];
   categoryStock: Array<{ category: string; stock: number }>;
-  topConsumed: Array<{ itemId: string; itemName: string; quantity: number }>;
+  topStockIn: Array<{ itemId: string; itemName: string; quantity: number }>;
   dailyMovement: Array<{ date: string; in: number; out: number }>;
   itemMovement: Array<{
     itemId: string;

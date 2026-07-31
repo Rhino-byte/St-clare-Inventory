@@ -67,7 +67,7 @@ export function AnalyticsPageClient() {
           <AnalyticsCharts
             categories={data.categories ?? []}
             dailyTopByCategory={data.dailyTopByCategory ?? {}}
-            topConsumed={data.topConsumed}
+            topStockIn={data.topStockIn}
             periodComparison={
               data.periodComparison ?? {
                 currentFrom: "",

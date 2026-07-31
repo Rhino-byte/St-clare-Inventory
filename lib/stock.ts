@@ -5,7 +5,7 @@ export function calculateClosingStock(
   stockIn: number,
   stockOut: number
 ): number {
-  return openingStock + stockIn - stockOut;
+  return Math.max(0, openingStock + stockIn - stockOut);
 }
 
 export function parseSheetNumber(value: string | number | undefined): number {
@@ -40,8 +40,14 @@ export function validateStockMovement(
     return "Quantity must be greater than zero.";
   }
 
-  if (type === "out" && quantity > item.closingStock) {
-    return `Cannot remove ${quantity} ${item.unit}. Only ${item.closingStock} available.`;
+  if (type === "out") {
+    const available = Math.max(0, item.closingStock);
+    if (available <= 0) {
+      return `Cannot remove stock. ${item.itemName} has no available quantity.`;
+    }
+    if (quantity > available) {
+      return `Cannot remove ${quantity} ${item.unit}. Only ${available} available.`;
+    }
   }
 
   return null;
