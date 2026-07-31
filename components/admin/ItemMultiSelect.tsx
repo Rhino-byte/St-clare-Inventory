@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
 import type { InventoryOption } from "@/lib/analytics";
 
 const MAX_SELECTED = 5;
@@ -16,7 +17,16 @@ export function ItemMultiSelect({
   value,
   onChange,
 }: ItemMultiSelectProps) {
+  const [search, setSearch] = useState("");
   const selected = useMemo(() => new Set(value), [value]);
+
+  const filteredOptions = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return options;
+    return options.filter((option) =>
+      option.itemName.toLowerCase().includes(query)
+    );
+  }, [options, search]);
 
   function toggle(itemId: string) {
     if (selected.has(itemId)) {
@@ -38,34 +48,45 @@ export function ItemMultiSelect({
       <p className="text-xs text-slate-500">
         Select up to {MAX_SELECTED} items ({value.length}/{MAX_SELECTED}).
       </p>
+      <Input
+        type="search"
+        placeholder="Search items…"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        aria-label="Search items"
+      />
       <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3">
-        {options.map((option) => {
-          const isOn = selected.has(option.itemId);
-          const disabled = !isOn && value.length >= MAX_SELECTED;
-          return (
-            <label
-              key={option.itemId}
-              className={`inline-flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm ${
-                isOn
-                  ? "border-emerald-600 bg-emerald-50 text-emerald-900"
-                  : disabled
-                    ? "cursor-not-allowed border-slate-200 text-slate-400"
-                    : "border-slate-200 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
-                checked={isOn}
-                disabled={disabled}
-                onChange={() => toggle(option.itemId)}
-              />
-              <span className="max-w-[10rem] truncate" title={option.itemName}>
-                {option.itemName}
-              </span>
-            </label>
-          );
-        })}
+        {filteredOptions.length === 0 ? (
+          <p className="text-sm text-slate-500">No items match your search.</p>
+        ) : (
+          filteredOptions.map((option) => {
+            const isOn = selected.has(option.itemId);
+            const disabled = !isOn && value.length >= MAX_SELECTED;
+            return (
+              <label
+                key={option.itemId}
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm ${
+                  isOn
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-900"
+                    : disabled
+                      ? "cursor-not-allowed border-slate-200 text-slate-400"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                  checked={isOn}
+                  disabled={disabled}
+                  onChange={() => toggle(option.itemId)}
+                />
+                <span className="max-w-[10rem] truncate" title={option.itemName}>
+                  {option.itemName}
+                </span>
+              </label>
+            );
+          })
+        )}
       </div>
     </div>
   );
