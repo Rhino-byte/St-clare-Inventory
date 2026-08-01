@@ -11,6 +11,7 @@ import { fetchInventory, submitStockMovement } from "@/lib/api-client";
 import { formatNumber } from "@/lib/utils";
 import {
   DEFAULT_STOCK_DESTINATION,
+  STOCK_DESTINATIONS,
   type InventoryItem,
   type StockDestination,
 } from "@/lib/types";
@@ -131,10 +132,11 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
                 }
                 className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
-                <option value="Kitchen">Kitchen</option>
-                <option value="Office">Office</option>
-                <option value="Charity Work">Charity Work</option>
-                <option value="House Keeping">House Keeping</option>
+                {STOCK_DESTINATIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </div>
           )}

@@ -19,6 +19,7 @@ export const STOCK_DESTINATIONS = [
   "Office",
   "Kitchen",
   "House Keeping",
+  "Visitors",
 ] as const;
 
 export type StockDestination = (typeof STOCK_DESTINATIONS)[number];
@@ -32,6 +33,19 @@ export interface StockMovementRequest {
   notes?: string;
   /** Required for stock-out. Where items were taken. */
   destination?: StockDestination;
+}
+
+export interface BulkStockMovementLine {
+  itemId: string;
+  quantity: number;
+  notes?: string;
+  /** Required for stock-out. Where items were taken. */
+  destination?: StockDestination;
+}
+
+export interface BulkStockMovementRequest {
+  type: StockMovementType;
+  lines: BulkStockMovementLine[];
 }
 
 export interface Transaction {

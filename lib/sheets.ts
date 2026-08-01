@@ -277,7 +277,60 @@ export async function updateStockMovement(
   };
 }
 
+/** Apply multiple inventory stock updates in one Sheets batch request. */
+export async function batchUpdateStockMovements(
+  updates: Array<{ item: InventoryItem; type: "in" | "out"; quantity: number }>
+): Promise<InventoryItem[]> {
+  if (updates.length === 0) return [];
+
+  const sheets = getSheetsClient();
+  const spreadsheetId = getSpreadsheetId();
+
+  const updatedItems = updates.map(({ item, type, quantity }) => {
+    const stockIn = type === "in" ? item.stockIn + quantity : item.stockIn;
+    const stockOut = type === "out" ? item.stockOut + quantity : item.stockOut;
+    const closingStock = calculateClosingStock(
+      item.openingStock,
+      stockIn,
+      stockOut
+    );
+    return {
+      ...item,
+      stockIn,
+      stockOut,
+      closingStock,
+    };
+  });
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: updatedItems.map((item) => ({
+        range: `${INVENTORY_SHEET}!F${item.rowIndex}:H${item.rowIndex}`,
+        values: [
+          [
+            toSheetInteger(item.stockIn),
+            toSheetInteger(item.stockOut),
+            toSheetInteger(item.closingStock),
+          ],
+        ],
+      })),
+    },
+  });
+
+  return updatedItems;
+}
+
 export async function appendTransaction(transaction: Transaction): Promise<void> {
+  await appendTransactions([transaction]);
+}
+
+export async function appendTransactions(
+  transactions: Transaction[]
+): Promise<void> {
+  if (transactions.length === 0) return;
+
   await ensureAuxiliarySheets();
   const sheets = getSheetsClient();
 
@@ -287,18 +340,16 @@ export async function appendTransaction(transaction: Transaction): Promise<void>
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
-      values: [
-        [
-          transaction.timestamp,
-          toSheetItemId(transaction.itemId),
-          transaction.itemName,
-          transaction.type,
-          toSheetInteger(transaction.quantity),
-          transaction.userEmail,
-          transaction.notes,
-          transaction.destination,
-        ],
-      ],
+      values: transactions.map((transaction) => [
+        transaction.timestamp,
+        toSheetItemId(transaction.itemId),
+        transaction.itemName,
+        transaction.type,
+        toSheetInteger(transaction.quantity),
+        transaction.userEmail,
+        transaction.notes,
+        transaction.destination,
+      ]),
     },
   });
 }

@@ -6,7 +6,13 @@ import type {
   PeriodComparisonSeries,
   UserActivitySeries,
 } from "@/lib/analytics";
-import type { DashboardStats, InventoryItem, Transaction } from "@/lib/types";
+import type {
+  DashboardStats,
+  InventoryItem,
+  BulkStockMovementRequest,
+  StockDestination,
+  Transaction,
+} from "@/lib/types";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 
 export type AnalyticsResponse = {
@@ -46,10 +52,26 @@ export async function submitStockMovement(payload: {
   type: "in" | "out";
   quantity: number;
   notes?: string;
-  destination?: "Charity Work" | "Office" | "Kitchen" | "House Keeping";
+  destination?: StockDestination;
 }) {
   const headers = await getFirebaseAuthHeader();
   const response = await fetch("/api/stock", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? "Failed to update stock");
+  }
+  return data;
+}
+
+export async function submitBulkStockMovement(payload: BulkStockMovementRequest): Promise<{
+  items: InventoryItem[];
+}> {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch("/api/stock/bulk", {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
