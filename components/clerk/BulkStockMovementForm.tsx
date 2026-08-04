@@ -75,7 +75,6 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
     }
 
     setLines((current) => [
-      ...current,
       {
         key: `${itemId}-${Date.now()}`,
         itemId,
@@ -83,6 +82,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
         notes: "",
         destination: DEFAULT_STOCK_DESTINATION,
       },
+      ...current,
     ]);
     setPickerItemId("");
   }
@@ -133,7 +133,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
         lines: draft.map((line) => ({
           itemId: line.itemId,
           quantity: Number(line.quantity),
-          notes: line.notes,
+          notes: type === "in" ? line.notes : "",
           ...(type === "out" ? { destination: line.destination } : {}),
         })),
       });
@@ -264,24 +264,24 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
                           </div>
                         )}
 
-                        <div
-                          className={`space-y-2 ${type === "out" ? "sm:col-span-2" : "sm:col-span-1"}`}
-                        >
-                          <Label htmlFor={`notes-${line.key}`}>
-                            Notes (optional)
-                          </Label>
-                          <Input
-                            id={`notes-${line.key}`}
-                            value={line.notes}
-                            onChange={(event) =>
-                              updateLine(line.key, {
-                                notes: event.target.value,
-                              })
-                            }
-                            placeholder="e.g. breakfast service"
-                            disabled={submitting}
-                          />
-                        </div>
+                        {type === "in" && (
+                          <div className="space-y-2 sm:col-span-1">
+                            <Label htmlFor={`prices-${line.key}`}>
+                              Prices (optional)
+                            </Label>
+                            <Input
+                              id={`prices-${line.key}`}
+                              value={line.notes}
+                              onChange={(event) =>
+                                updateLine(line.key, {
+                                  notes: event.target.value,
+                                })
+                              }
+                              placeholder="e.g. unit price"
+                              disabled={submitting}
+                            />
+                          </div>
+                        )}
                       </div>
                     </li>
                   );

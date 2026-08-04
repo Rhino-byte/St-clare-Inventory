@@ -61,7 +61,7 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
         itemId,
         type,
         quantity: qty,
-        notes,
+        notes: type === "in" ? notes : "",
         ...(type === "out" ? { destination } : {}),
       });
       toast.success(
@@ -141,15 +141,17 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Input
-              id="notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="e.g. breakfast service"
-            />
-          </div>
+          {type === "in" && (
+            <div className="space-y-2">
+              <Label htmlFor="prices">Prices (optional)</Label>
+              <Input
+                id="prices"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="e.g. unit price"
+              />
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={submitting || loading}>
             {submitting ? "Saving..." : type === "in" ? "Add Stock" : "Remove Stock"}

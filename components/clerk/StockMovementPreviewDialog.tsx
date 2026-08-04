@@ -215,22 +215,22 @@ export function StockMovementPreviewDialog({
                       </div>
                     )}
 
-                    <div
-                      className={`space-y-2 ${type === "out" ? "sm:col-span-2" : ""}`}
-                    >
-                      <Label htmlFor={`preview-notes-${line.key}`}>
-                        Notes (optional)
-                      </Label>
-                      <Input
-                        id={`preview-notes-${line.key}`}
-                        value={line.notes}
-                        onChange={(event) =>
-                          updateLine(line.key, { notes: event.target.value })
-                        }
-                        placeholder="e.g. breakfast service"
-                        disabled={submitting}
-                      />
-                    </div>
+                    {type === "in" && (
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor={`preview-prices-${line.key}`}>
+                          Prices (optional)
+                        </Label>
+                        <Input
+                          id={`preview-prices-${line.key}`}
+                          value={line.notes}
+                          onChange={(event) =>
+                            updateLine(line.key, { notes: event.target.value })
+                          }
+                          placeholder="e.g. unit price"
+                          disabled={submitting}
+                        />
+                      </div>
+                    )}
                   </div>
                 </li>
               );
