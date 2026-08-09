@@ -10,6 +10,7 @@ import type {
   AlertLogEntry,
   InventoryItem,
   ItemUpdateRequest,
+  StockCorrection,
   Transaction,
 } from "./types";
 import { DEFAULT_STOCK_DESTINATION } from "./types";
@@ -17,6 +18,7 @@ import { DEFAULT_STOCK_DESTINATION } from "./types";
 const INVENTORY_SHEET = "Sheet1";
 const TRANSACTIONS_SHEET = "Transactions";
 const ALERT_LOG_SHEET = "AlertLog";
+const CORRECTIONS_SHEET = "Corrections";
 
 function getSpreadsheetId(): string {
   const id = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
@@ -99,6 +101,12 @@ export async function ensureAuxiliarySheets(): Promise<void> {
     });
   }
 
+  if (!existing.has(CORRECTIONS_SHEET)) {
+    requests.push({
+      addSheet: { properties: { title: CORRECTIONS_SHEET } },
+    });
+  }
+
   if (requests.length) {
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
@@ -137,6 +145,28 @@ export async function ensureAuxiliarySheets(): Promise<void> {
       valueInputOption: "RAW",
       requestBody: {
         values: [["Item ID", "Last Alerted At", "Stock At Alert"]],
+      },
+    });
+  }
+
+  if (!existing.has(CORRECTIONS_SHEET)) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${CORRECTIONS_SHEET}!A1:H1`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [
+          [
+            "Timestamp",
+            "Item ID",
+            "Item Name",
+            "Delta",
+            "Before Closing",
+            "After Closing",
+            "Admin Email",
+            "Reason",
+          ],
+        ],
       },
     });
   }
@@ -381,6 +411,57 @@ export async function getTransactions(): Promise<Transaction[]> {
       notes: String(row[6] ?? ""),
       destination,
     };
+  });
+}
+
+export async function getCorrections(): Promise<StockCorrection[]> {
+  await ensureAuxiliarySheets();
+  const sheets = getSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: getSpreadsheetId(),
+    range: `${CORRECTIONS_SHEET}!A2:H`,
+  });
+
+  const rows = response.data.values ?? [];
+  return rows
+    .map((row) => ({
+      timestamp: String(row[0] ?? ""),
+      itemId: String(row[1] ?? "").trim(),
+      itemName: String(row[2] ?? ""),
+      delta: parseSheetNumber(row[3]),
+      beforeClosing: parseSheetNumber(row[4]),
+      afterClosing: parseSheetNumber(row[5]),
+      adminEmail: String(row[6] ?? ""),
+      reason: String(row[7] ?? ""),
+    }))
+    .filter((entry) => entry.itemId && entry.timestamp);
+}
+
+export async function appendCorrection(
+  correction: StockCorrection
+): Promise<void> {
+  await ensureAuxiliarySheets();
+  const sheets = getSheetsClient();
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: getSpreadsheetId(),
+    range: `${CORRECTIONS_SHEET}!A:H`,
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: {
+      values: [
+        [
+          correction.timestamp,
+          toSheetItemId(correction.itemId),
+          correction.itemName,
+          toSheetInteger(correction.delta),
+          toSheetInteger(correction.beforeClosing),
+          toSheetInteger(correction.afterClosing),
+          correction.adminEmail,
+          correction.reason,
+        ],
+      ],
+    },
   });
 }
 

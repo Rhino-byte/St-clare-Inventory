@@ -82,3 +82,21 @@ export interface ItemUpdateRequest {
   reorderLevel?: number | null;
   notes?: string;
 }
+
+export interface StockCorrectionRequest {
+  itemId: string;
+  /** Signed quantity: positive adds stock, negative removes stock. */
+  delta: number;
+  reason: string;
+}
+
+export interface StockCorrection {
+  timestamp: string;
+  itemId: string;
+  itemName: string;
+  delta: number;
+  beforeClosing: number;
+  afterClosing: number;
+  adminEmail: string;
+  reason: string;
+}

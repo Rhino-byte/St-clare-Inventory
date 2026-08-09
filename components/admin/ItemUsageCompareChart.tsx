@@ -25,41 +25,48 @@ const LINE_COLORS = [
 ];
 
 function usageCopy(days: number): { title: string; description: string } {
-  if (days >= 90) {
-    return {
-      title: "Quarterly item usage",
-      description:
-        "Compare stock-out for selected items over the last 90 days.",
-    };
-  }
   if (days >= 30) {
     return {
-      title: "Monthly item usage",
-      description:
-        "Compare stock-out for selected items over the last 30 days.",
+      title: "Item usage compare",
+      description: `Compare stock-out for selected items over the last ${days} days.`,
+    };
+  }
+  if (days >= 7) {
+    return {
+      title: "Weekly item usage",
+      description: "Compare stock-out for selected items over the last 7 days.",
     };
   }
   return {
-    title: "Weekly item usage",
-    description: "Compare stock-out for selected items over the last 7 days.",
+    title: "Item usage compare",
+    description: "Compare stock-out for selected items in the selected range.",
   };
 }
 
-interface WeeklyItemUsageChartProps {
+interface ItemUsageCompareChartProps {
   days: number;
   inventoryOptions: InventoryOption[];
   itemUsageSeries: ItemDailyOutSeries;
+  defaultItemIds?: string[];
+  subtitle?: string;
 }
 
-export function WeeklyItemUsageChart({
+export function ItemUsageCompareChart({
   days,
   inventoryOptions,
   itemUsageSeries,
-}: WeeklyItemUsageChartProps) {
+  defaultItemIds,
+  subtitle,
+}: ItemUsageCompareChartProps) {
   const isMobile = useIsMobile();
   const { title, description } = usageCopy(days);
 
-  const defaultIds = useMemo(() => {
+  const resolvedDefaults = useMemo(() => {
+    if (defaultItemIds?.length) {
+      return defaultItemIds.filter((id) =>
+        inventoryOptions.some((option) => option.itemId === id)
+      );
+    }
     const withActivity = itemUsageSeries.itemIds.filter((id) =>
       itemUsageSeries.points.some((point) => Number(point[id] ?? 0) > 0)
     );
@@ -67,13 +74,13 @@ export function WeeklyItemUsageChart({
       ? withActivity
       : inventoryOptions.map((option) => option.itemId);
     return pool.slice(0, 3);
-  }, [inventoryOptions, itemUsageSeries]);
+  }, [defaultItemIds, inventoryOptions, itemUsageSeries]);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(defaultIds);
+  const [selectedIds, setSelectedIds] = useState<string[]>(resolvedDefaults);
 
   useEffect(() => {
-    setSelectedIds(defaultIds);
-  }, [defaultIds]);
+    setSelectedIds(resolvedDefaults);
+  }, [resolvedDefaults]);
 
   const chartItems = selectedIds.map((id) => ({
     itemId: id,
@@ -87,7 +94,9 @@ export function WeeklyItemUsageChart({
     <Card>
       <CardHeader className="space-y-3">
         <CardTitle>{title}</CardTitle>
-        <p className="text-sm font-normal text-slate-500">{description}</p>
+        <p className="text-sm font-normal text-slate-500">
+          {subtitle ?? description}
+        </p>
         <ItemMultiSelect
           options={inventoryOptions}
           value={selectedIds}

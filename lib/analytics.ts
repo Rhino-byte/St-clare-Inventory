@@ -7,10 +7,93 @@ import {
   transactionDateKey,
 } from "@/lib/dates";
 import type { DashboardStats, InventoryItem, Transaction } from "./types";
+import { DEFAULT_STOCK_DESTINATION } from "./types";
 import { isLowStock, isOutOfStock } from "./stock";
 
 function categoryOf(item: InventoryItem): string {
   return item.category?.trim() || "Uncategorized";
+}
+
+export const ALL_CATEGORY = "All";
+export const ALL_DESTINATION = "All";
+
+export function normalizeDestination(value: string | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed || DEFAULT_STOCK_DESTINATION;
+}
+
+export function matchesDestination(
+  tx: Transaction,
+  destination?: string | null
+): boolean {
+  if (!destination || destination === ALL_DESTINATION) return true;
+  return normalizeDestination(tx.destination) === destination;
+}
+
+/** Filter transactions by inventory category and/or stock-out destination. */
+export function filterAnalyticsTransactions(
+  transactions: Transaction[],
+  items: InventoryItem[],
+  options: {
+    category?: string | null;
+    destination?: string | null;
+    /** When true, destination only filters stock-out rows; stock-in always kept. */
+    destinationOutsOnly?: boolean;
+  } = {}
+): Transaction[] {
+  const { category, destination, destinationOutsOnly = false } = options;
+  const itemById = new Map(items.map((item) => [item.itemId, item]));
+
+  return transactions.filter((tx) => {
+    if (category && category !== ALL_CATEGORY) {
+      const item = itemById.get(tx.itemId);
+      if (!item || categoryOf(item) !== category) return false;
+    }
+
+    if (!destination || destination === ALL_DESTINATION) return true;
+
+    if (tx.type === "out") {
+      return matchesDestination(tx, destination);
+    }
+
+    return destinationOutsOnly;
+  });
+}
+
+export type StockHealth = {
+  totalItems: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  atOrBelowReorder: number;
+};
+
+export function stockHealthSnapshot(items: InventoryItem[]): StockHealth {
+  const lowStockCount = items.filter(isLowStock).length;
+  return {
+    totalItems: items.length,
+    lowStockCount,
+    outOfStockCount: items.filter(isOutOfStock).length,
+    atOrBelowReorder: lowStockCount,
+  };
+}
+
+export type DestinationTotal = {
+  destination: string;
+  quantity: number;
+};
+
+export function destinationBreakdown(
+  transactions: Transaction[]
+): DestinationTotal[] {
+  const totals = new Map<string, number>();
+  for (const tx of transactions) {
+    if (tx.type !== "out") continue;
+    const destination = normalizeDestination(tx.destination);
+    totals.set(destination, (totals.get(destination) ?? 0) + tx.quantity);
+  }
+  return Array.from(totals.entries())
+    .map(([destination, quantity]) => ({ destination, quantity }))
+    .sort((a, b) => b.quantity - a.quantity);
 }
 
 export function buildDashboardStats(
@@ -111,20 +194,41 @@ export function topStockInItems(transactions: Transaction[], limit = 10) {
     .slice(0, limit);
 }
 
-export function dailyMovementTotals(transactions: Transaction[]) {
+/** Continuous daily in/out totals (fill missing days in range). */
+export function dailyMovementTotals(
+  transactions: Transaction[],
+  fromKey?: string,
+  toKey?: string
+) {
+  const range =
+    fromKey && toKey
+      ? { from: fromKey, to: toKey }
+      : (() => {
+          const dates = transactions
+            .map((tx) => transactionDateKey(tx.timestamp))
+            .filter(Boolean)
+            .sort();
+          if (!dates.length) return null;
+          return { from: dates[0], to: dates[dates.length - 1] };
+        })();
+
+  if (!range) return [] as Array<{ date: string; in: number; out: number }>;
+
+  const dayKeys = dateKeysInclusive(range.from, range.to);
   const totals = new Map<string, { in: number; out: number }>();
-  for (const tx of transactions) {
-    const day = transactionDateKey(tx.timestamp);
-    if (!day) continue;
-    const current = totals.get(day) ?? { in: 0, out: 0 };
-    if (tx.type === "in") current.in += tx.quantity;
-    else current.out += tx.quantity;
-    totals.set(day, current);
+  for (const day of dayKeys) {
+    totals.set(day, { in: 0, out: 0 });
   }
 
-  return Array.from(totals.entries())
-    .map(([date, values]) => ({ date, ...values }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  for (const tx of transactions) {
+    const day = transactionDateKey(tx.timestamp);
+    if (!day || !totals.has(day)) continue;
+    const current = totals.get(day)!;
+    if (tx.type === "in") current.in += tx.quantity;
+    else current.out += tx.quantity;
+  }
+
+  return dayKeys.map((date) => ({ date, ...totals.get(date)! }));
 }
 
 export function itemMovementTotals(transactions: Transaction[]) {
@@ -188,10 +292,7 @@ export function itemDailyMovement(
       current.stockIn += tx.quantity;
     } else {
       current.stockOut += tx.quantity;
-      const dest = tx.destination?.trim();
-      if (dest) {
-        current.destinations.add(dest);
-      }
+      current.destinations.add(normalizeDestination(tx.destination));
     }
 
     totals.set(tx.itemId, current);
@@ -255,8 +356,6 @@ export function userActivityByDay(
   return { users, points };
 }
 
-export const ALL_CATEGORY = "All";
-
 export type CategoryTopDailySeries = {
   topItems: Array<{ itemId: string; itemName: string }>;
   points: Array<Record<string, string | number>>;
@@ -265,19 +364,19 @@ export type CategoryTopDailySeries = {
 export type DailyTopByCategory = Record<string, CategoryTopDailySeries>;
 
 /**
- * For All + each inventory category: top N items by period stock-out,
- * then continuous daily stock-out series keyed by itemName.
+ * Top N items by period stock-out for one category, with daily series.
+ * Pass already destination-filtered out transactions when needed.
  */
-export function categoryTopDailyUsageSeries(
+export function topUsedDailySeries(
   items: InventoryItem[],
   transactions: Transaction[],
   fromKey: string,
   toKey: string,
+  category: string,
   topN = 5
-): DailyTopByCategory {
+): CategoryTopDailySeries {
   const itemById = new Map(items.map((item) => [item.itemId, item]));
   const dayKeys = dateKeysInclusive(fromKey, toKey);
-  const categories = [ALL_CATEGORY, ...listCategories(items)];
 
   const periodOut = new Map<string, { itemName: string; quantity: number }>();
   const dailyOut = new Map<string, Map<string, number>>();
@@ -290,6 +389,11 @@ export function categoryTopDailyUsageSeries(
     if (tx.type !== "out") continue;
     const day = transactionDateKey(tx.timestamp);
     if (!isDateKeyInRange(day, fromKey, toKey)) continue;
+
+    if (category && category !== ALL_CATEGORY) {
+      const item = itemById.get(tx.itemId);
+      if (!item || categoryOf(item) !== category) continue;
+    }
 
     const current = periodOut.get(tx.itemId) ?? {
       itemName: tx.itemName,
@@ -304,41 +408,51 @@ export function categoryTopDailyUsageSeries(
     }
   }
 
+  const topItems = Array.from(periodOut.entries())
+    .map(([itemId, values]) => ({
+      itemId,
+      itemName: values.itemName,
+      quantity: values.quantity,
+    }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, topN)
+    .map(({ itemId, itemName }) => ({ itemId, itemName }));
+
+  const points = dayKeys.map((date) => {
+    const row: Record<string, string | number> = { date };
+    const dayMap = dailyOut.get(date)!;
+    for (const item of topItems) {
+      row[item.itemName] = dayMap.get(item.itemId) ?? 0;
+    }
+    return row;
+  });
+
+  return { topItems, points };
+}
+
+/**
+ * For All + each inventory category: top N items by period stock-out,
+ * then continuous daily stock-out series keyed by itemName.
+ */
+export function categoryTopDailyUsageSeries(
+  items: InventoryItem[],
+  transactions: Transaction[],
+  fromKey: string,
+  toKey: string,
+  topN = 5
+): DailyTopByCategory {
+  const categories = [ALL_CATEGORY, ...listCategories(items)];
   const result: DailyTopByCategory = {};
-
   for (const category of categories) {
-    const eligibleIds = Array.from(periodOut.keys()).filter((itemId) => {
-      if (category === ALL_CATEGORY) return true;
-      const item = itemById.get(itemId);
-      if (item) return categoryOf(item) === category;
-      return false;
-    });
-
-    const topItems = eligibleIds
-      .map((itemId) => {
-        const values = periodOut.get(itemId)!;
-        return {
-          itemId,
-          itemName: values.itemName,
-          quantity: values.quantity,
-        };
-      })
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, topN)
-      .map(({ itemId, itemName }) => ({ itemId, itemName }));
-
-    const points = dayKeys.map((date) => {
-      const row: Record<string, string | number> = { date };
-      const dayMap = dailyOut.get(date)!;
-      for (const item of topItems) {
-        row[item.itemName] = dayMap.get(item.itemId) ?? 0;
-      }
-      return row;
-    });
-
-    result[category] = { topItems, points };
+    result[category] = topUsedDailySeries(
+      items,
+      transactions,
+      fromKey,
+      toKey,
+      category,
+      topN
+    );
   }
-
   return result;
 }
 
@@ -477,4 +591,20 @@ export function itemDailyOutSeries(
     itemNames: Object.fromEntries(names),
     points,
   };
+}
+
+/** Top movers by stock-out quantity in the window (for default item compare selection). */
+export function topOutItemIds(
+  transactions: Transaction[],
+  limit = 3
+): string[] {
+  const totals = new Map<string, number>();
+  for (const tx of transactions) {
+    if (tx.type !== "out") continue;
+    totals.set(tx.itemId, (totals.get(tx.itemId) ?? 0) + tx.quantity);
+  }
+  return Array.from(totals.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([itemId]) => itemId);
 }

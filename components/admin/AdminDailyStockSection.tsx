@@ -16,11 +16,14 @@ import {
 } from "@/components/ui/table";
 import { fetchDailyStock } from "@/lib/api-client";
 import type { DailyStockItem } from "@/lib/analytics";
+import { ALL_DESTINATION, normalizeDestination } from "@/lib/analytics";
 import { formatNumber } from "@/lib/utils";
 
 interface AdminDailyStockSectionProps {
   date: string;
   onDateChange: (date: string) => void;
+  /** When set (and not All), only stock-out rows matching this destination are shown. */
+  destinationFilter?: string;
 }
 
 function EmptyBlock({ message }: { message: string }) {
@@ -123,6 +126,7 @@ function DayStockOutTable({ rows }: { rows: DailyStockItem[] }) {
 export function AdminDailyStockSection({
   date,
   onDateChange,
+  destinationFilter = ALL_DESTINATION,
 }: AdminDailyStockSectionProps) {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<DailyStockItem[]>([]);
@@ -149,10 +153,18 @@ export function AdminDailyStockSection({
     () => items.filter((item) => item.stockIn > 0),
     [items]
   );
-  const stockOutRows = useMemo(
-    () => items.filter((item) => item.stockOut > 0),
-    [items]
-  );
+  const stockOutRows = useMemo(() => {
+    const outs = items.filter((item) => item.stockOut > 0);
+    if (!destinationFilter || destinationFilter === ALL_DESTINATION) {
+      return outs;
+    }
+    return outs.filter((item) => {
+      const parts = item.destination
+        .split(",")
+        .map((part) => normalizeDestination(part));
+      return parts.includes(destinationFilter);
+    });
+  }, [items, destinationFilter]);
 
   return (
     <section className="space-y-4">
@@ -160,7 +172,11 @@ export function AdminDailyStockSection({
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Daily stock</h2>
           <p className="text-sm text-slate-500">
-            Stock in and stock out for a selected day.
+            Stock in and stock out for a selected day
+            {destinationFilter && destinationFilter !== ALL_DESTINATION
+              ? ` (stock out filtered to ${destinationFilter})`
+              : ""}
+            .
           </p>
         </div>
         <div className="w-full space-y-2 sm:w-auto">

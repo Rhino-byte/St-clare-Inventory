@@ -6,7 +6,7 @@ import {
   transactionDateKey,
 } from "@/lib/dates";
 import { DEFAULT_STOCK_DESTINATION } from "@/lib/types";
-import type { InventoryItem, Transaction } from "@/lib/types";
+import type { InventoryItem, StockCorrection, Transaction } from "@/lib/types";
 
 export type ReportPeriod = "weekly" | "monthly" | "4months" | "custom";
 
@@ -168,16 +168,17 @@ export function reportDestinationTotals(
 
 /**
  * Period stock balance:
- * Opening = sheet.openingStock + ins(before from) - outs(before from)
- * Stock In/Out = sums in [from, to]
+ * Opening = sheet.openingStock + ins(before from) - outs(before from) + corrections(before from)
+ * Stock In/Out = sums in [from, to] (transactions only)
  * Total = Opening + Stock In
- * Closing = Total - Stock Out
+ * Closing = Total - Stock Out + corrections(in period)
  */
 export function reportStockBalanceRows(
   items: InventoryItem[],
   allTransactions: Transaction[],
   fromKey: string,
-  toKey: string
+  toKey: string,
+  allCorrections: StockCorrection[] = []
 ): ReportStockBalanceRow[] {
   const byItem = new Map<string, Transaction[]>();
   for (const tx of allTransactions) {
@@ -185,6 +186,14 @@ export function reportStockBalanceRows(
     const list = byItem.get(tx.itemId) ?? [];
     list.push(tx);
     byItem.set(tx.itemId, list);
+  }
+
+  const correctionsByItem = new Map<string, StockCorrection[]>();
+  for (const entry of allCorrections) {
+    if (!entry.timestamp || !entry.itemId) continue;
+    const list = correctionsByItem.get(entry.itemId) ?? [];
+    list.push(entry);
+    correctionsByItem.set(entry.itemId, list);
   }
 
   return items
@@ -207,9 +216,18 @@ export function reportStockBalanceRows(
         }
       }
 
-      const opening = item.openingStock + priorIn - priorOut;
+      let priorCorrection = 0;
+      let periodCorrection = 0;
+      for (const entry of correctionsByItem.get(item.itemId) ?? []) {
+        const day = transactionDateKey(entry.timestamp);
+        if (!day) continue;
+        if (day < fromKey) priorCorrection += entry.delta;
+        else if (day <= toKey) periodCorrection += entry.delta;
+      }
+
+      const opening = item.openingStock + priorIn - priorOut + priorCorrection;
       const total = opening + periodIn;
-      const closing = total - periodOut;
+      const closing = total - periodOut + periodCorrection;
 
       return {
         itemId: item.itemId,

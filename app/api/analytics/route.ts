@@ -1,22 +1,25 @@
 import { NextResponse } from "next/server";
 import {
+  ALL_DESTINATION,
   buildDashboardStats,
-  categoryTopDailyUsageSeries,
+  destinationBreakdown,
   dailyMovementTotals,
+  filterAnalyticsTransactions,
   filterTransactionsByDays,
-  groupStockByCategory,
   inventoryOptions,
   itemDailyOutSeries,
-  itemMovementTotals,
   listCategories,
   periodOutComparisonSeries,
-  topStockInItems,
+  stockHealthSnapshot,
+  topOutItemIds,
+  topUsedDailySeries,
   userActivityByDay,
 } from "@/lib/analytics";
 import { requireAdmin } from "@/lib/auth/api-auth";
 import { rollingDateRange } from "@/lib/dates";
 import { getInventoryItems, getTransactions } from "@/lib/sheets";
 import { isLowStock } from "@/lib/stock";
+import { STOCK_DESTINATIONS } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
@@ -24,47 +27,122 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const days = Number(searchParams.get("days") ?? 30);
     const span = days <= 0 ? 1 : days;
+    const categoryParam = searchParams.get("category")?.trim() ?? "";
+    const destinationParam =
+      searchParams.get("destination")?.trim() || ALL_DESTINATION;
 
     const [items, transactions] = await Promise.all([
       getInventoryItems(),
       getTransactions(),
     ]);
 
-    const filtered = filterTransactionsByDays(transactions, days);
+    const categories = listCategories(items);
+    const category =
+      categoryParam && categories.includes(categoryParam)
+        ? categoryParam
+        : categories[0] ?? "";
+
+    const destination =
+      destinationParam === ALL_DESTINATION ||
+      (STOCK_DESTINATIONS as readonly string[]).includes(destinationParam)
+        ? destinationParam
+        : ALL_DESTINATION;
+
+    const ranged = filterTransactionsByDays(transactions, days);
     const currentRange = rollingDateRange(span);
-    const usageSpan = days <= 0 ? 7 : span;
+
+    // Cap item-compare window at 30 days for readability when range is longer.
+    const usageSpan = days <= 0 ? 7 : Math.min(span, 30);
     const usageRange = rollingDateRange(usageSpan);
 
-    const options = inventoryOptions(items);
-    const usageSeries = itemDailyOutSeries(
+    const scopedForCharts = filterAnalyticsTransactions(ranged, items, {
+      category,
+      destination,
+      destinationOutsOnly: true,
+    });
+
+    const scopedOutsForPeriod = filterAnalyticsTransactions(
       transactions,
+      items,
+      {
+        category,
+        destination,
+        destinationOutsOnly: false,
+      }
+    ).filter((tx) => tx.type === "out");
+
+    const categoryItems = items.filter(
+      (item) =>
+        !category ||
+        (item.category?.trim() || "Uncategorized") === category
+    );
+    const categoryOptions = inventoryOptions(categoryItems);
+
+    const topUsed = topUsedDailySeries(
+      items,
+      scopedForCharts,
+      currentRange.from,
+      currentRange.to,
+      category,
+      5
+    );
+
+    const periodComparison = periodOutComparisonSeries(
+      scopedOutsForPeriod,
+      days
+    );
+
+    const defaultItemIds = topOutItemIds(scopedForCharts, 3);
+    const usageItemIds =
+      defaultItemIds.length > 0
+        ? defaultItemIds
+        : categoryOptions.slice(0, 3).map((option) => option.itemId);
+
+    const usageSeries = itemDailyOutSeries(
+      scopedForCharts,
       usageRange.from,
       usageRange.to,
-      options.map((option) => option.itemId)
+      usageItemIds.length ? usageItemIds : undefined
     );
-    for (const option of options) {
+    for (const option of categoryOptions) {
       usageSeries.itemNames[option.itemId] = option.itemName;
     }
+
+    // Destination breakdown ignores destination filter (shows all destinations
+    // within category); when a destination is selected the UI shows a KPI.
+    const categoryScoped = filterAnalyticsTransactions(ranged, items, {
+      category,
+      destination: ALL_DESTINATION,
+      destinationOutsOnly: true,
+    });
+
+    const staffScoped = filterAnalyticsTransactions(ranged, items, {
+      category,
+      destination,
+      destinationOutsOnly: false,
+    });
 
     return NextResponse.json({
       stats: buildDashboardStats(items, transactions),
       lowStockItems: items.filter(isLowStock),
-      categoryStock: groupStockByCategory(items),
-      topStockIn: topStockInItems(filtered),
-      dailyMovement: dailyMovementTotals(filtered),
-      itemMovement: itemMovementTotals(filtered),
-      userActivity: userActivityByDay(filtered, days),
-      transactions: filtered,
-      categories: listCategories(items),
-      dailyTopByCategory: categoryTopDailyUsageSeries(
-        items,
-        transactions,
+      category,
+      destination,
+      categories,
+      destinations: [...STOCK_DESTINATIONS],
+      stockHealth: stockHealthSnapshot(items),
+      dailyMovement: dailyMovementTotals(
+        scopedForCharts,
         currentRange.from,
         currentRange.to
       ),
-      periodComparison: periodOutComparisonSeries(transactions, days),
-      inventoryOptions: options,
+      destinationTotals: destinationBreakdown(categoryScoped),
+      topUsed,
+      periodComparison,
+      inventoryOptions: categoryOptions,
       itemUsageSeries: usageSeries,
+      itemUsageDays: usageSpan,
+      defaultItemIds: usageItemIds,
+      userActivity: userActivityByDay(staffScoped, days),
     });
   } catch (error) {
     if (error instanceof Response) return error;

@@ -52,7 +52,8 @@ export function UserActivityChart({ data }: UserActivityChartProps) {
       <CardHeader>
         <CardTitle>Staff activity</CardTitle>
         <p className="text-sm font-normal text-slate-500">
-          Transactions recorded per user each day (from the range selected above).
+          Transactions recorded per user each day for the selected range,
+          category, and destination.
         </p>
       </CardHeader>
       <CardContent className="h-72 sm:h-96">

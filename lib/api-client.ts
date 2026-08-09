@@ -1,15 +1,20 @@
 import type {
+  CategoryTopDailySeries,
   DailyStockItem,
   DailyTopByCategory,
+  DestinationTotal,
   InventoryOption,
   ItemDailyOutSeries,
   PeriodComparisonSeries,
+  StockHealth,
   UserActivitySeries,
 } from "@/lib/analytics";
 import type {
   DashboardStats,
   InventoryItem,
   BulkStockMovementRequest,
+  StockCorrection,
+  StockCorrectionRequest,
   StockDestination,
   Transaction,
 } from "@/lib/types";
@@ -18,23 +23,32 @@ import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
 export type AnalyticsResponse = {
   stats: DashboardStats;
   lowStockItems: InventoryItem[];
-  categoryStock: Array<{ category: string; stock: number }>;
-  topStockIn: Array<{ itemId: string; itemName: string; quantity: number }>;
+  category?: string;
+  destination?: string;
+  categories: string[];
+  destinations: string[];
+  stockHealth: StockHealth;
   dailyMovement: Array<{ date: string; in: number; out: number }>;
-  itemMovement: Array<{
+  destinationTotals: DestinationTotal[];
+  topUsed: CategoryTopDailySeries;
+  periodComparison: PeriodComparisonSeries;
+  inventoryOptions: InventoryOption[];
+  itemUsageSeries: ItemDailyOutSeries;
+  itemUsageDays: number;
+  defaultItemIds: string[];
+  userActivity: UserActivitySeries;
+  // Legacy optional fields kept for older callers
+  categoryStock?: Array<{ category: string; stock: number }>;
+  topStockIn?: Array<{ itemId: string; itemName: string; quantity: number }>;
+  itemMovement?: Array<{
     itemId: string;
     itemName: string;
     in: number;
     out: number;
     net: number;
   }>;
-  userActivity: UserActivitySeries;
-  transactions: Transaction[];
-  categories: string[];
-  dailyTopByCategory: DailyTopByCategory;
-  periodComparison: PeriodComparisonSeries;
-  inventoryOptions: InventoryOption[];
-  itemUsageSeries: ItemDailyOutSeries;
+  transactions?: Transaction[];
+  dailyTopByCategory?: DailyTopByCategory;
 };
 
 export async function fetchInventory(): Promise<InventoryItem[]> {
@@ -124,9 +138,13 @@ export async function fetchReport(params: {
 
 export async function fetchAnalytics(
   days: number,
-  headers: HeadersInit
+  headers: HeadersInit,
+  filters?: { category?: string; destination?: string }
 ): Promise<AnalyticsResponse> {
-  const response = await fetch(`/api/analytics?days=${days}`, {
+  const search = new URLSearchParams({ days: String(days) });
+  if (filters?.category) search.set("category", filters.category);
+  if (filters?.destination) search.set("destination", filters.destination);
+  const response = await fetch(`/api/analytics?${search.toString()}`, {
     headers,
     cache: "no-store",
   });
@@ -151,6 +169,39 @@ export async function updateItem(
     throw new Error(data.error ?? "Failed to update item");
   }
   return data.item;
+}
+
+export async function fetchCorrections(limit = 50): Promise<StockCorrection[]> {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch(`/api/corrections?limit=${limit}`, {
+    headers,
+    cache: "no-store",
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? "Failed to load corrections");
+  }
+  return data.corrections ?? [];
+}
+
+export async function submitStockCorrection(
+  payload: StockCorrectionRequest
+): Promise<{
+  item: InventoryItem;
+  correction: StockCorrection;
+  alertSent: boolean;
+}> {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch("/api/corrections", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? "Failed to apply correction");
+  }
+  return data;
 }
 
 export async function sendTestAlert(headers: HeadersInit) {

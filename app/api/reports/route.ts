@@ -9,7 +9,7 @@ import {
   resolveReportRange,
   type ReportPeriod,
 } from "@/lib/reports";
-import { getInventoryItems, getTransactions } from "@/lib/sheets";
+import { getCorrections, getInventoryItems, getTransactions } from "@/lib/sheets";
 
 const PERIODS: ReportPeriod[] = ["weekly", "monthly", "4months", "custom"];
 
@@ -40,9 +40,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: range.error }, { status: 400 });
     }
 
-    const [transactions, items] = await Promise.all([
+    const [transactions, items, corrections] = await Promise.all([
       getTransactions(),
       getInventoryItems(),
+      getCorrections(),
     ]);
 
     const filtered = filterTransactionsByDateRange(
@@ -61,7 +62,8 @@ export async function GET(request: Request) {
         items,
         transactions,
         range.from,
-        range.to
+        range.to,
+        corrections
       ),
       destinationTotals: reportDestinationTotals(filtered),
     });
