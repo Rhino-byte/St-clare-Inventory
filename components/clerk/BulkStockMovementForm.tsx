@@ -292,7 +292,8 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
             <Button
               type="submit"
               className="w-full"
-              disabled={submitting || loading || lines.length === 0}
+              loading={submitting}
+              disabled={loading || lines.length === 0}
             >
               {type === "in"
                 ? `Add Stock (${lines.length})`

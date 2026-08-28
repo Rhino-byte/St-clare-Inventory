@@ -190,9 +190,10 @@ export function CorrectionsPageClient() {
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={submitting || loading}
+              loading={submitting}
+              disabled={loading}
             >
-              {submitting ? "Saving..." : "Apply correction"}
+              Apply correction
             </Button>
           </form>
         </CardContent>

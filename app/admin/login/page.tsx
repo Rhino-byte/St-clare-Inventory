@@ -8,7 +8,7 @@ import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { LoadingSpinner, LoadingState } from "@/components/ui/loading-state";
+import { LoadingState } from "@/components/ui/loading-state";
 import { signInWithGoogle, signOutFirebase } from "@/lib/auth/firebase-client";
 import { fetchPortalStatus, portalLogin } from "@/lib/auth/portal-client";
 import { isUidAllowed } from "@/lib/auth/roles";
@@ -134,18 +134,8 @@ function AdminLoginContent() {
               autoComplete="current-password"
               className="w-full"
             />
-            <Button type="submit" className="w-full" disabled={submittingPassword}>
-              {submittingPassword ? (
-                <span className="inline-flex items-center gap-2">
-                  <LoadingSpinner size="sm" />
-                  <span>
-                    Verifying
-                    <span className="loading-ellipsis" aria-hidden="true" />
-                  </span>
-                </span>
-              ) : (
-                "Continue"
-              )}
+            <Button type="submit" className="w-full" loading={submittingPassword}>
+              Continue
             </Button>
           </form>
         ) : (

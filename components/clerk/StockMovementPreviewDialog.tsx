@@ -250,13 +250,10 @@ export function StockMovementPreviewDialog({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || draft.length === 0}
+            loading={submitting}
+            disabled={draft.length === 0}
           >
-            {submitting
-              ? "Saving..."
-              : type === "in"
-                ? "Confirm Add Stock"
-                : "Confirm Remove Stock"}
+            {type === "in" ? "Confirm Add Stock" : "Confirm Remove Stock"}
           </Button>
         </DialogFooter>
       </DialogContent>

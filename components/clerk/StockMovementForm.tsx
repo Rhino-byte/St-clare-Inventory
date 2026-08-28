@@ -153,8 +153,13 @@ export function StockMovementForm({ type }: StockMovementFormProps) {
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={submitting || loading}>
-            {submitting ? "Saving..." : type === "in" ? "Add Stock" : "Remove Stock"}
+          <Button
+            type="submit"
+            className="w-full"
+            loading={submitting}
+            disabled={loading}
+          >
+            {type === "in" ? "Add Stock" : "Remove Stock"}
           </Button>
         </form>
       </CardContent>

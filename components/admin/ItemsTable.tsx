@@ -186,9 +186,9 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
                   <Button
                     size="sm"
                     onClick={() => saveItem(item)}
-                    disabled={savingId === item.itemId}
+                    loading={savingId === item.itemId}
                   >
-                    {savingId === item.itemId ? "Saving..." : "Save"}
+                    Save
                   </Button>
                 </TableCell>
               </TableRow>
@@ -279,9 +279,9 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
               <Button
                 className="w-full"
                 onClick={() => saveItem(item)}
-                disabled={savingId === item.itemId}
+                loading={savingId === item.itemId}
               >
-                {savingId === item.itemId ? "Saving..." : "Save"}
+                Save
               </Button>
             </CardContent>
           </Card>

@@ -100,3 +100,72 @@ export interface StockCorrection {
   adminEmail: string;
   reason: string;
 }
+
+export interface DailyReportTemplateEntry {
+  sortOrder: number;
+  itemId: string;
+  itemName: string;
+}
+
+export const WEEKDAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export const MENU_MEALS = ["breakfast", "lunch", "dinner"] as const;
+
+export type MenuMeal = (typeof MENU_MEALS)[number];
+
+export interface WeeklyMenuTemplateEntry {
+  weekday: Weekday;
+  meal: MenuMeal;
+  sortOrder: number;
+  itemId: string;
+  itemName: string;
+}
+
+export type WeeklyMenuMeals = Record<
+  MenuMeal,
+  Array<{ itemId: string; itemName: string; sortOrder: number }>
+>;
+
+export interface DailyReportMealSection {
+  meal: MenuMeal;
+  rows: DailyReportRow[];
+}
+
+export interface DailyReportSettings {
+  enabled: boolean;
+  /** 24h HH:MM in Africa/Nairobi */
+  sendTime: string;
+  recipients: string;
+  /** YYYY-MM-DD when cron last sent successfully */
+  lastSentDate: string;
+}
+
+export interface DailyReportRow {
+  itemId: string;
+  itemName: string;
+  unit: string;
+  meal: MenuMeal;
+  opening: number;
+  stockIn: number;
+  stockOut: number;
+  closing: number;
+  hasMovement: boolean;
+}
+
+export interface DailyReportPayload {
+  date: string;
+  weekday: Weekday;
+  rows: DailyReportRow[];
+  sections: DailyReportMealSection[];
+  missingItemIds: string[];
+}

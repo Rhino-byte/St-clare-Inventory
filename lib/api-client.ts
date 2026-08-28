@@ -215,3 +215,115 @@ export async function sendTestAlert(headers: HeadersInit) {
   }
   return data;
 }
+
+export async function fetchWeeklyMenuTemplate(day: import("@/lib/types").Weekday) {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch(
+    `/api/daily-report/template?day=${encodeURIComponent(day)}`,
+    { headers, cache: "no-store" }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Failed to load template");
+  return data as {
+    weekday: import("@/lib/types").Weekday;
+    meals: import("@/lib/types").WeeklyMenuMeals;
+  };
+}
+
+export async function saveWeeklyMenuTemplate(
+  day: import("@/lib/types").Weekday,
+  meals: import("@/lib/types").WeeklyMenuMeals
+) {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch(
+    `/api/daily-report/template?day=${encodeURIComponent(day)}`,
+    {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ meals }),
+    }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Failed to save template");
+  return data as {
+    weekday: import("@/lib/types").Weekday;
+    meals: import("@/lib/types").WeeklyMenuMeals;
+  };
+}
+
+export async function fetchDailyReportSettings(): Promise<
+  import("@/lib/types").DailyReportSettings
+> {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch("/api/daily-report/settings", { headers, cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Failed to load settings");
+  return data.settings;
+}
+
+export async function saveDailyReportSettings(
+  settings: import("@/lib/types").DailyReportSettings
+) {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch("/api/daily-report/settings", {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(settings),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Failed to save settings");
+  return data.settings;
+}
+
+export async function fetchDailyReport(date: string) {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch(`/api/daily-report?date=${encodeURIComponent(date)}`, {
+    headers,
+    cache: "no-store",
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Failed to load daily report");
+  return data as import("@/lib/types").DailyReportPayload;
+}
+
+export async function sendDailyReportEmail(date: string) {
+  const headers = await getFirebaseAuthHeader();
+  const response = await fetch("/api/daily-report/send", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ date }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Failed to send daily report");
+  return data;
+}
+
+export async function downloadDailyReportPdf(
+  date: string,
+  cachedReport?: import("@/lib/types").DailyReportPayload | null
+) {
+  const headers = await getFirebaseAuthHeader();
+
+  const response =
+    cachedReport && cachedReport.date === date
+      ? await fetch("/api/daily-report/pdf", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ report: cachedReport }),
+        })
+      : await fetch(`/api/daily-report/pdf?date=${encodeURIComponent(date)}`, {
+          headers,
+        });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error ?? "Failed to download PDF");
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `daily-stock-${date}.pdf`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}

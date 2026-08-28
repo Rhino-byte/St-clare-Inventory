@@ -41,6 +41,10 @@ The app will auto-create these tabs if they do not exist:
 
 - `Transactions` — audit log columns: Timestamp, Item ID, Item Name, Type, Quantity, User Email, Notes, **Destination** (stock-out: Charity Work / Office / Kitchen; blank stock-outs default to Kitchen)
 - `AlertLog`
+- `Corrections` — admin stock adjustment audit log
+- `DailyReportTemplate` — legacy flat list (migrated automatically to Monday breakfast)
+- `WeeklyMenuTemplate` — weekday + meal menu: Day, Meal, Sort, Item ID, Item Name
+- `DailyReportSettings` — enabled flag, send time (HH:MM, Africa/Nairobi), recipients, last sent date
 
 Share the spreadsheet with your service account email as **Editor**.
 
@@ -100,7 +104,9 @@ Open `http://localhost:3000`.
 | `/admin/dashboard` | Admin | KPIs and low-stock list |
 | `/admin/analytics` | Admin | Charts + daily stock by date |
 | `/admin/reports` | Admin | Period reports (weekly/monthly/4 months/custom) |
+| `/admin/daily-report` | Admin | Daily stock email template, preview, PDF, and send |
 | `/admin/items` | Admin | Edit items and reorder levels |
+| `/admin/corrections` | Admin | Admin stock corrections audit |
 | `/admin/alerts` | Admin | Test email + low-stock review |
 | `/clerk/login` | Staff | Google sign-in + staff password |
 | `/clerk/stock-out` | Staff | Record usage |
@@ -114,7 +120,10 @@ Open `http://localhost:3000`.
 3. Add all environment variables from `.env.example`
 4. Deploy
 
-`vercel.json` includes a cron job that calls `/api/cron/check-stock` every 6 hours.
+`vercel.json` includes cron jobs:
+
+- `/api/cron/check-stock` every 6 hours (low-stock alerts)
+- `/api/cron/daily-report` every hour (sends the daily stock email when the configured Nairobi send time matches and reporting is enabled)
 
 Set `CRON_SECRET` in Vercel and ensure the cron route receives:
 

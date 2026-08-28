@@ -60,8 +60,8 @@ export function AlertsPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button onClick={handleTestEmail} disabled={loading}>
-            {loading ? "Sending..." : "Send test email"}
+          <Button onClick={handleTestEmail} loading={loading}>
+            Send test email
           </Button>
           <Button variant="outline" onClick={loadHistory}>
             Refresh low-stock list
