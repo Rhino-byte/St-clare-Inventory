@@ -120,10 +120,12 @@ Open `http://localhost:3000`.
 3. Add all environment variables from `.env.example`
 4. Deploy
 
-`vercel.json` includes cron jobs:
+`vercel.json` includes cron jobs (once per day — required on Vercel Hobby):
 
-- `/api/cron/check-stock` every 6 hours (low-stock alerts)
-- `/api/cron/daily-report` every hour (sends the daily stock email when the configured Nairobi send time matches and reporting is enabled)
+- `/api/cron/check-stock` at `0 6 * * *` UTC (9:00 AM Nairobi) — low-stock alerts
+- `/api/cron/daily-report` at `0 15 * * *` UTC (6:00 PM Nairobi) — daily stock email when reporting is enabled
+
+To change the automated email time, update the cron schedule in `vercel.json` (UTC) and redeploy.
 
 Set `CRON_SECRET` in Vercel and ensure the cron route receives:
 

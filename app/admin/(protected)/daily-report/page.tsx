@@ -117,7 +117,7 @@ export default function AdminDailyReportPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [settings, setSettings] = useState<DailyReportSettings>({
     enabled: false,
-    sendTime: "20:00",
+    sendTime: "18:00",
     recipients: "",
     lastSentDate: "",
   });
@@ -251,8 +251,8 @@ export default function AdminDailyReportPage() {
       <div>
         <h1 className="text-2xl font-semibold">Daily Report</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Automated emails send yesterday&apos;s stock using yesterday&apos;s weekday menu
-          (Africa/Nairobi).
+          Automated emails run once daily at 6:00 PM Nairobi and report yesterday&apos;s
+          stock using yesterday&apos;s weekday menu.
         </p>
       </div>
 
@@ -260,6 +260,7 @@ export default function AdminDailyReportPage() {
         <CardHeader>
           <CardTitle>Email schedule</CardTitle>
           <CardDescription>
+            Automated send runs once daily at 6:00 PM Nairobi (15:00 UTC via Vercel cron).
             Reports use the previous calendar day&apos;s stock and that day&apos;s menu template.
           </CardDescription>
         </CardHeader>
@@ -274,13 +275,21 @@ export default function AdminDailyReportPage() {
             />
             Send daily report email automatically
           </label>
-          <Input
-            type="time"
-            value={settings.sendTime}
-            onChange={(event) =>
-              setSettings({ ...settings, sendTime: event.target.value })
-            }
-          />
+          <div className="space-y-1">
+            <Label htmlFor="send-time">Preferred send time</Label>
+            <Input
+              id="send-time"
+              type="time"
+              value={settings.sendTime}
+              onChange={(event) =>
+                setSettings({ ...settings, sendTime: event.target.value })
+              }
+            />
+            <p className="text-xs text-slate-500">
+              Used for reference and manual sends. The automated cron always runs at 6:00 PM
+              Nairobi unless you change the schedule in vercel.json.
+            </p>
+          </div>
           <Input
             placeholder="Recipients (optional)"
             value={settings.recipients}

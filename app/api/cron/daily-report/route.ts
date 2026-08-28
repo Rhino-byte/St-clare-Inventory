@@ -1,38 +1,8 @@
 import { NextResponse } from "next/server";
 import { loadDailyReportForDate } from "@/lib/daily-report";
 import { sendDailyReportEmail } from "@/lib/daily-report-mail";
-import { yesterdayDateKey, todayDateKey, APP_TIME_ZONE } from "@/lib/dates";
+import { yesterdayDateKey, todayDateKey } from "@/lib/dates";
 import { getDailyReportSettings, updateDailyReportSettings } from "@/lib/sheets";
-
-function getNairobiHourMinute(now = new Date()): { hour: string; minute: string } {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: APP_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-
-  const hour = parts.find((part) => part.type === "hour")?.value ?? "00";
-  const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
-  return { hour, minute };
-}
-
-function shouldSendNow(settingsSendTime: string, now = new Date()): boolean {
-  const [targetHour, targetMinute] = settingsSendTime.split(":");
-  const { hour, minute } = getNairobiHourMinute(now);
-  return hour === targetHour && minute === targetMinute;
-}
-
-function matchesConfiguredSendWindow(now = new Date()): boolean {
-  const configuredSendTime = process.env.DAILY_REPORT_SEND_TIME?.trim();
-  if (!configuredSendTime || !/^\d{2}:\d{2}$/.test(configuredSendTime)) {
-    return true;
-  }
-
-  const [targetHour, targetMinute] = configuredSendTime.split(":");
-  const { hour, minute } = getNairobiHourMinute(now);
-  return hour === targetHour && minute === targetMinute;
-}
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -46,18 +16,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ skipped: true, reason: "cron_disabled_env" });
   }
 
-  if (!matchesConfiguredSendWindow()) {
-    return NextResponse.json({ skipped: true, reason: "not_send_time" });
-  }
-
   try {
     const settings = await getDailyReportSettings();
     if (!settings.enabled) {
       return NextResponse.json({ skipped: true, reason: "disabled" });
-    }
-
-    if (!shouldSendNow(settings.sendTime)) {
-      return NextResponse.json({ skipped: true, reason: "not_send_time" });
     }
 
     const today = todayDateKey();

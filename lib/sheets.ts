@@ -37,7 +37,7 @@ const WEEKLY_MENU_TEMPLATE_SHEET = "WeeklyMenuTemplate";
 
 const DEFAULT_DAILY_REPORT_SETTINGS: DailyReportSettings = {
   enabled: false,
-  sendTime: "20:00",
+  sendTime: "18:00",
   recipients: "",
   lastSentDate: "",
 };
