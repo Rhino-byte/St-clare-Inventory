@@ -11,6 +11,7 @@ import type {
 } from "@/lib/analytics";
 import type {
   DashboardStats,
+  CreateItemRequest,
   InventoryItem,
   BulkStockMovementRequest,
   StockCorrection,
@@ -169,6 +170,22 @@ export async function updateItem(
     throw new Error(data.error ?? "Failed to update item");
   }
   return data.item;
+}
+
+export async function createItem(
+  payload: CreateItemRequest,
+  headers: HeadersInit
+): Promise<InventoryItem> {
+  const response = await fetch("/api/items", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? "Failed to add item");
+  }
+  return data.item as InventoryItem;
 }
 
 export async function fetchCorrections(limit = 50): Promise<StockCorrection[]> {

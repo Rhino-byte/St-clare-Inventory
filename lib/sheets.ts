@@ -16,6 +16,7 @@ import type {
   AlertLogEntry,
   DailyReportSettings,
   DailyReportTemplateEntry,
+  CreateItemRequest,
   InventoryItem,
   ItemUpdateRequest,
   MenuMeal,
@@ -677,6 +678,125 @@ export async function updateItemMetadata(
   invalidateSheetsCache(["inventory", "dailyReportSource"]);
 
   return nextItem;
+}
+
+function nextNumericItemId(items: InventoryItem[]): string {
+  let maxId = 0;
+  for (const item of items) {
+    if (!/^(0|[1-9]\d*)$/.test(item.itemId)) continue;
+    const value = Number(item.itemId);
+    if (Number.isSafeInteger(value) && value > maxId) {
+      maxId = value;
+    }
+  }
+  return String(maxId + 1);
+}
+
+function parseAppendedRowIndex(updatedRange: string | null | undefined): number | null {
+  const match = updatedRange?.match(/![A-Z]+(\d+)/i);
+  if (!match) return null;
+  const rowIndex = Number(match[1]);
+  return Number.isInteger(rowIndex) ? rowIndex : null;
+}
+
+export async function createInventoryItem(
+  input: CreateItemRequest
+): Promise<InventoryItem> {
+  const itemName = input.itemName.trim();
+  if (!itemName) {
+    throw new Error("Item name is required.");
+  }
+
+  const items = await getInventoryItems();
+  const duplicate = items.some(
+    (item) => item.itemName.trim().toLowerCase() === itemName.toLowerCase()
+  );
+  if (duplicate) {
+    throw new Error("An item with this name already exists.");
+  }
+
+  const openingStock = input.openingStock ?? 0;
+  if (
+    !Number.isFinite(openingStock) ||
+    !Number.isInteger(openingStock) ||
+    openingStock < 0
+  ) {
+    throw new Error(
+      "Opening stock must be a whole number that is zero or greater."
+    );
+  }
+
+  let reorderLevel: number | null = null;
+  if (input.reorderLevel !== undefined && input.reorderLevel !== null) {
+    if (
+      !Number.isFinite(input.reorderLevel) ||
+      !Number.isInteger(input.reorderLevel) ||
+      input.reorderLevel < 0
+    ) {
+      throw new Error(
+        "Reorder level must be a whole number that is zero or greater."
+      );
+    }
+    reorderLevel = input.reorderLevel;
+  }
+
+  const itemId = nextNumericItemId(items);
+  const stockIn = 0;
+  const stockOut = 0;
+  const closingStock = calculateClosingStock(openingStock, stockIn, stockOut);
+  const category = (input.category ?? "").trim();
+  const unit = (input.unit ?? "").trim();
+  const notes = (input.notes ?? "").trim();
+
+  const sheets = getSheetsClient();
+  const response = await withSheetsRetry(() =>
+    sheets.spreadsheets.values.append({
+      spreadsheetId: getSpreadsheetId(),
+      range: `${INVENTORY_SHEET}!A:J`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [
+          [
+            toSheetItemId(itemId),
+            itemName,
+            category,
+            unit,
+            toSheetInteger(openingStock),
+            toSheetInteger(stockIn),
+            toSheetInteger(stockOut),
+            toSheetInteger(closingStock),
+            reorderLevel === null ? "" : toSheetInteger(reorderLevel),
+            notes,
+          ],
+        ],
+      },
+    })
+  );
+
+  invalidateSheetsCache(["inventory", "dailyReportSource"]);
+
+  const rowIndex =
+    parseAppendedRowIndex(response.data.updates?.updatedRange) ??
+    (await getInventoryItems()).find((item) => item.itemId === itemId)?.rowIndex;
+
+  if (!rowIndex) {
+    throw new Error("Item was added, but its sheet row could not be confirmed.");
+  }
+
+  return {
+    rowIndex,
+    itemId,
+    itemName,
+    category,
+    unit,
+    openingStock,
+    stockIn,
+    stockOut,
+    closingStock,
+    reorderLevel,
+    notes,
+  };
 }
 
 export async function getAlertLogs(): Promise<AlertLogEntry[]> {

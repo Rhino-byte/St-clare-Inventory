@@ -83,6 +83,15 @@ export interface ItemUpdateRequest {
   notes?: string;
 }
 
+export interface CreateItemRequest {
+  itemName: string;
+  category?: string;
+  unit?: string;
+  openingStock?: number;
+  reorderLevel?: number | null;
+  notes?: string;
+}
+
 export interface StockCorrectionRequest {
   itemId: string;
   /** Signed quantity: positive adds stock, negative removes stock. */
