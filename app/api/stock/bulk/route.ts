@@ -9,7 +9,6 @@ import {
 import { movementDateError, movementTimestampFromDateKey } from "@/lib/dates";
 import { validateStockMovement } from "@/lib/stock";
 import {
-  DEFAULT_STOCK_DESTINATION,
   STOCK_DESTINATIONS,
   type BulkStockMovementLine,
   type BulkStockMovementRequest,
@@ -32,8 +31,8 @@ function resolveDestination(
   destination: unknown
 ): { destination: string; error?: string } {
   if (type !== "out") return { destination: "" };
-  if (destination == null) {
-    return { destination: DEFAULT_STOCK_DESTINATION };
+  if (typeof destination !== "string" || destination.trim() === "") {
+    return { destination: "", error: "Destination is required." };
   }
   if (!isStockDestination(destination)) {
     return {

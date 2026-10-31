@@ -22,7 +22,6 @@ import { fetchInventory, submitBulkStockMovement } from "@/lib/api-client";
 import { movementDateError, todayDateKey } from "@/lib/dates";
 import { formatNumber } from "@/lib/utils";
 import {
-  DEFAULT_STOCK_DESTINATION,
   STOCK_DESTINATIONS,
   type InventoryItem,
   type StockDestination,
@@ -35,7 +34,7 @@ type BulkLine = {
   itemId: string;
   quantity: string;
   notes: string;
-  destination: StockDestination;
+  destination: StockDestination | "";
 };
 
 interface BulkStockMovementFormProps {
@@ -82,7 +81,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
         itemId,
         quantity: "",
         notes: "",
-        destination: DEFAULT_STOCK_DESTINATION,
+        destination: "",
       },
       ...current,
     ]);
@@ -125,6 +124,10 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
         toast.error(`Enter a valid quantity for ${item.itemName}.`);
         return;
       }
+      if (type === "out" && !line.destination) {
+        toast.error(`Select a destination for ${item.itemName}.`);
+        return;
+      }
       nextPreview.push(toPreviewLine(line, item));
     }
 
@@ -138,6 +141,10 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
       toast.error(dateError);
       return;
     }
+    if (type === "out" && draft.some((line) => !line.destination)) {
+      toast.error("Select a destination for every item.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -148,7 +155,9 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
           itemId: line.itemId,
           quantity: Number(line.quantity),
           notes: type === "in" ? line.notes : "",
-          ...(type === "out" ? { destination: line.destination } : {}),
+          ...(type === "out" && line.destination
+            ? { destination: line.destination }
+            : {}),
         })),
       });
       toast.success(
@@ -287,15 +296,17 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
                             <select
                               id={`dest-${line.key}`}
                               value={line.destination}
+                              required
                               onChange={(event) =>
                                 updateLine(line.key, {
                                   destination: event.target
-                                    .value as StockDestination,
+                                    .value as StockDestination | "",
                                 })
                               }
                               disabled={submitting}
                               className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                             >
+                              <option value="">Select destination</option>
                               {STOCK_DESTINATIONS.map((option) => (
                                 <option key={option} value={option}>
                                   {option}
@@ -334,7 +345,12 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
               type="submit"
               className="w-full"
               loading={submitting}
-              disabled={loading || lines.length === 0 || dateError !== null}
+              disabled={
+                loading ||
+                lines.length === 0 ||
+                dateError !== null ||
+                (type === "out" && lines.some((line) => !line.destination))
+              }
             >
               {type === "in"
                 ? `Add Stock (${lines.length})`

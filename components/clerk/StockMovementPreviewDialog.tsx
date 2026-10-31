@@ -29,7 +29,7 @@ export type PreviewLine = {
   available: number;
   quantity: string;
   notes: string;
-  destination: StockDestination;
+  destination: StockDestination | "";
 };
 
 interface StockMovementPreviewDialogProps {
@@ -99,6 +99,10 @@ export function StockMovementPreviewDialog({
       const qty = Number(line.quantity);
       if (!Number.isFinite(qty) || qty <= 0) {
         toast.error(`Enter a valid quantity for ${line.itemName}.`);
+        return;
+      }
+      if (type === "out" && !line.destination) {
+        toast.error(`Select a destination for ${line.itemName}.`);
         return;
       }
       totalsByItem.set(line.itemId, (totalsByItem.get(line.itemId) ?? 0) + qty);
@@ -224,15 +228,17 @@ export function StockMovementPreviewDialog({
                         <select
                           id={`preview-dest-${line.key}`}
                           value={line.destination}
+                          required
                           onChange={(event) =>
                             updateLine(line.key, {
                               destination: event.target
-                                .value as StockDestination,
+                                .value as StockDestination | "",
                             })
                           }
                           disabled={submitting}
                           className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                         >
+                          <option value="">Select destination</option>
                           {STOCK_DESTINATIONS.map((option) => (
                             <option key={option} value={option}>
                               {option}
@@ -278,7 +284,11 @@ export function StockMovementPreviewDialog({
             type="button"
             onClick={handleConfirm}
             loading={submitting}
-            disabled={draft.length === 0 || dateError !== null}
+            disabled={
+              draft.length === 0 ||
+              dateError !== null ||
+              (type === "out" && draft.some((line) => !line.destination))
+            }
           >
             {type === "in" ? "Confirm Add Stock" : "Confirm Remove Stock"}
           </Button>
@@ -295,7 +305,7 @@ export function toPreviewLine(
     itemId: string;
     quantity: string;
     notes: string;
-    destination: StockDestination;
+    destination: StockDestination | "";
   },
   item: InventoryItem
 ): PreviewLine {

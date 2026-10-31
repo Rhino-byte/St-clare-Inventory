@@ -246,7 +246,7 @@ export function ItemsTable({ initialItems }: ItemsTableProps) {
                   id="new-item-unit"
                   value={newItem.unit}
                   onChange={(event) => updateNewItem("unit", event.target.value)}
-                  placeholder="kg, pcs"
+                  placeholder="kg, pieces, litres"
                 />
               </div>
             </div>

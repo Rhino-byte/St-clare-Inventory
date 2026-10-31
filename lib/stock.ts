@@ -41,6 +41,25 @@ export function parseOptionalNumber(
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const UNIT_ALIASES: Record<string, string> = {
+  kg: "kg",
+  kgs: "kg",
+  pc: "pieces",
+  pcs: "pieces",
+  piece: "pieces",
+  pieces: "pieces",
+  liter: "litres",
+  liters: "litres",
+  litre: "litres",
+  litres: "litres",
+};
+
+/** Map common unit spellings to the inventory sheet standard. */
+export function standardizeUnit(unit: string): string {
+  const trimmed = unit.trim();
+  return UNIT_ALIASES[trimmed.toLowerCase()] ?? trimmed;
+}
+
 export function isLowStock(item: InventoryItem): boolean {
   if (item.reorderLevel === null) return false;
   return item.closingStock <= item.reorderLevel;

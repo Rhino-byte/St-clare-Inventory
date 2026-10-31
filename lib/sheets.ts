@@ -9,6 +9,7 @@ import {
   calculateClosingStock,
   parseOptionalNumber,
   parseSheetNumber,
+  standardizeUnit,
   toSheetInteger,
   toSheetItemId,
 } from "./stock";
@@ -92,7 +93,7 @@ function rowToItem(row: string[], rowIndex: number): InventoryItem | null {
     itemId,
     itemName,
     category: String(row[2] ?? "").trim(),
-    unit: String(row[3] ?? "").trim(),
+    unit: standardizeUnit(String(row[3] ?? "")),
     openingStock,
     stockIn,
     stockOut,
@@ -636,7 +637,7 @@ export async function updateItemMetadata(
     ...item,
     itemName: update.itemName ?? item.itemName,
     category: update.category ?? item.category,
-    unit: update.unit ?? item.unit,
+    unit: standardizeUnit(update.unit ?? item.unit),
     openingStock: update.openingStock ?? item.openingStock,
     reorderLevel:
       update.reorderLevel !== undefined ? update.reorderLevel : item.reorderLevel,
@@ -745,7 +746,7 @@ export async function createInventoryItem(
   const stockOut = 0;
   const closingStock = calculateClosingStock(openingStock, stockIn, stockOut);
   const category = (input.category ?? "").trim();
-  const unit = (input.unit ?? "").trim();
+  const unit = standardizeUnit(input.unit ?? "");
   const notes = (input.notes ?? "").trim();
 
   const sheets = getSheetsClient();
