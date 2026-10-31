@@ -16,7 +16,6 @@ import type {
   BulkStockMovementRequest,
   StockCorrection,
   StockCorrectionRequest,
-  StockDestination,
   Transaction,
 } from "@/lib/types";
 import { getFirebaseAuthHeader } from "@/lib/auth/use-firebase-auth";
@@ -60,26 +59,6 @@ export async function fetchInventory(): Promise<InventoryItem[]> {
     throw new Error(data.error ?? "Failed to load inventory");
   }
   return data.items;
-}
-
-export async function submitStockMovement(payload: {
-  itemId: string;
-  type: "in" | "out";
-  quantity: number;
-  notes?: string;
-  destination?: StockDestination;
-}) {
-  const headers = await getFirebaseAuthHeader();
-  const response = await fetch("/api/stock", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error ?? "Failed to update stock");
-  }
-  return data;
 }
 
 export async function submitBulkStockMovement(payload: BulkStockMovementRequest): Promise<{

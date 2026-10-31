@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { movementDateError, todayDateKey } from "@/lib/dates";
 import { formatNumber } from "@/lib/utils";
 import {
   STOCK_DESTINATIONS,
@@ -35,9 +36,10 @@ interface StockMovementPreviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: "in" | "out";
+  date: string;
   lines: PreviewLine[];
   submitting: boolean;
-  onConfirm: (lines: PreviewLine[]) => void | Promise<void>;
+  onConfirm: (lines: PreviewLine[], date: string) => void | Promise<void>;
 }
 
 function projectedClosing(
@@ -54,17 +56,22 @@ export function StockMovementPreviewDialog({
   open,
   onOpenChange,
   type,
+  date,
   lines,
   submitting,
   onConfirm,
 }: StockMovementPreviewDialogProps) {
   const [draft, setDraft] = useState<PreviewLine[]>([]);
+  const [draftDate, setDraftDate] = useState(date);
+  const today = todayDateKey();
+  const dateError = movementDateError(draftDate);
 
   useEffect(() => {
     if (open) {
       setDraft(lines.map((line) => ({ ...line })));
+      setDraftDate(date);
     }
-  }, [open, lines]);
+  }, [open, lines, date]);
 
   function updateLine(key: string, patch: Partial<PreviewLine>) {
     setDraft((current) =>
@@ -77,6 +84,10 @@ export function StockMovementPreviewDialog({
   }
 
   async function handleConfirm() {
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
     if (draft.length === 0) {
       toast.error("Add at least one item.");
       return;
@@ -105,7 +116,7 @@ export function StockMovementPreviewDialog({
       }
     }
 
-    await onConfirm(draft);
+    await onConfirm(draft, draftDate.trim());
   }
 
   return (
@@ -122,10 +133,26 @@ export function StockMovementPreviewDialog({
             Preview {type === "in" ? "Stock In" : "Stock Out"}
           </DialogTitle>
           <DialogDescription>
-            Review and edit the list before saving. Nothing is written until you
-            confirm.
+            Review the movement date and the list before saving. Nothing is
+            written until you confirm.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="space-y-2">
+          <Label htmlFor="preview-movement-date">Movement date</Label>
+          <Input
+            id="preview-movement-date"
+            type="date"
+            value={draftDate}
+            max={today}
+            required
+            onChange={(event) => setDraftDate(event.target.value)}
+            disabled={submitting}
+          />
+          {dateError ? (
+            <p className="text-sm text-red-600">{dateError}</p>
+          ) : null}
+        </div>
 
         {draft.length === 0 ? (
           <p className="rounded-lg border border-dashed border-slate-200 p-6 text-sm text-slate-500">
@@ -251,7 +278,7 @@ export function StockMovementPreviewDialog({
             type="button"
             onClick={handleConfirm}
             loading={submitting}
-            disabled={draft.length === 0}
+            disabled={draft.length === 0 || dateError !== null}
           >
             {type === "in" ? "Confirm Add Stock" : "Confirm Remove Stock"}
           </Button>

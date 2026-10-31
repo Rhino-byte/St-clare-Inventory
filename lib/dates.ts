@@ -51,6 +51,40 @@ export function todayDateKey(now = new Date()): string {
   return formatDateKeyInAppTz(now);
 }
 
+/** True for a real calendar day written as YYYY-MM-DD. */
+export function isValidDateKey(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  return (
+    utc.getUTCFullYear() === year &&
+    utc.getUTCMonth() === month - 1 &&
+    utc.getUTCDate() === day
+  );
+}
+
+/**
+ * Staff movement dates must be a real calendar day on or before today
+ * in Africa/Nairobi. Returns an error message, or null when the date is allowed.
+ */
+export function movementDateError(
+  dateKey: string,
+  now = new Date()
+): string | null {
+  const value = dateKey.trim();
+  if (!value) return "Select a movement date.";
+  if (!isValidDateKey(value)) return "Enter a valid date.";
+  if (value > todayDateKey(now)) {
+    return "Movement date cannot be in the future.";
+  }
+  return null;
+}
+
+/** ISO timestamp at noon Africa/Nairobi for a YYYY-MM-DD movement date. */
+export function movementTimestampFromDateKey(dateKey: string): string {
+  return new Date(`${dateKey}T12:00:00+03:00`).toISOString();
+}
+
 /** Previous calendar day in app timezone. */
 export function yesterdayDateKey(now = new Date()): string {
   return addCalendarDays(todayDateKey(now), -1);

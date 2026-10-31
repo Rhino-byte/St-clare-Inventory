@@ -26,15 +26,6 @@ export type StockDestination = (typeof STOCK_DESTINATIONS)[number];
 
 export const DEFAULT_STOCK_DESTINATION: StockDestination = "Kitchen";
 
-export interface StockMovementRequest {
-  itemId: string;
-  type: StockMovementType;
-  quantity: number;
-  notes?: string;
-  /** Required for stock-out. Where items were taken. */
-  destination?: StockDestination;
-}
-
 export interface BulkStockMovementLine {
   itemId: string;
   quantity: number;
@@ -45,6 +36,8 @@ export interface BulkStockMovementLine {
 
 export interface BulkStockMovementRequest {
   type: StockMovementType;
+  /** YYYY-MM-DD movement day in Africa/Nairobi. Required. */
+  date: string;
   lines: BulkStockMovementLine[];
 }
 

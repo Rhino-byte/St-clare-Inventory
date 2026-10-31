@@ -19,6 +19,7 @@ import {
   type PreviewLine,
 } from "@/components/clerk/StockMovementPreviewDialog";
 import { fetchInventory, submitBulkStockMovement } from "@/lib/api-client";
+import { movementDateError, todayDateKey } from "@/lib/dates";
 import { formatNumber } from "@/lib/utils";
 import {
   DEFAULT_STOCK_DESTINATION,
@@ -46,6 +47,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerItemId, setPickerItemId] = useState("");
+  const [movementDate, setMovementDate] = useState("");
   const [lines, setLines] = useState<BulkLine[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLines, setPreviewLines] = useState<PreviewLine[]>([]);
@@ -99,6 +101,11 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const dateError = movementDateError(movementDate);
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
     if (lines.length === 0) {
       toast.error("Add at least one item.");
       return;
@@ -125,11 +132,18 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
     setPreviewOpen(true);
   }
 
-  async function handleConfirm(draft: PreviewLine[]) {
+  async function handleConfirm(draft: PreviewLine[], date: string) {
+    const dateError = movementDateError(date);
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await submitBulkStockMovement({
         type,
+        date: date.trim(),
         lines: draft.map((line) => ({
           itemId: line.itemId,
           quantity: Number(line.quantity),
@@ -148,6 +162,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
       );
       setLines([]);
       setPickerItemId("");
+      setMovementDate("");
       setPreviewOpen(false);
       setPreviewLines([]);
     } catch (error) {
@@ -157,12 +172,14 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
     }
   }
 
+  const dateError = movementDateError(movementDate);
+
   return (
     <>
       <Card>
         <CardHeader>
           <CardTitle>
-            {type === "in" ? "Bulk Stock In" : "Bulk Stock Out"}
+            {type === "in" ? "Record Stock In" : "Record Stock Out"}
           </CardTitle>
           <CardDescription>
             {type === "in"
@@ -172,6 +189,30 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="movement-date">Movement date</Label>
+              <Input
+                id="movement-date"
+                type="date"
+                value={movementDate}
+                max={todayDateKey()}
+                required
+                onChange={(event) => setMovementDate(event.target.value)}
+                disabled={loading || submitting}
+              />
+              <p
+                className={
+                  movementDate && dateError
+                    ? "text-sm text-red-600"
+                    : "text-sm text-slate-500"
+                }
+              >
+                {movementDate && dateError
+                  ? dateError
+                  : "Required. Choose the day this stock was added or removed."}
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label>Add item</Label>
               <ItemSearchCombobox
@@ -293,7 +334,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
               type="submit"
               className="w-full"
               loading={submitting}
-              disabled={loading || lines.length === 0}
+              disabled={loading || lines.length === 0 || dateError !== null}
             >
               {type === "in"
                 ? `Add Stock (${lines.length})`
@@ -307,6 +348,7 @@ export function BulkStockMovementForm({ type }: BulkStockMovementFormProps) {
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         type={type}
+        date={movementDate}
         lines={previewLines}
         submitting={submitting}
         onConfirm={handleConfirm}

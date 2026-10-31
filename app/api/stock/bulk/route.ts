@@ -6,6 +6,7 @@ import {
   batchUpdateStockMovements,
   getInventoryItems,
 } from "@/lib/sheets";
+import { movementDateError, movementTimestampFromDateKey } from "@/lib/dates";
 import { validateStockMovement } from "@/lib/stock";
 import {
   DEFAULT_STOCK_DESTINATION,
@@ -51,6 +52,13 @@ export async function POST(request: Request) {
     if (body.type !== "in" && body.type !== "out") {
       return NextResponse.json({ error: "Invalid movement type." }, { status: 400 });
     }
+
+    const movementDate = typeof body.date === "string" ? body.date : "";
+    const dateError = movementDateError(movementDate);
+    if (dateError) {
+      return NextResponse.json({ error: dateError }, { status: 400 });
+    }
+    const timestamp = movementTimestampFromDateKey(movementDate.trim());
 
     if (!Array.isArray(body.lines) || body.lines.length === 0) {
       return NextResponse.json(
@@ -144,7 +152,6 @@ export async function POST(request: Request) {
       updatedItems.map((item) => [item.itemId, item])
     );
 
-    const timestamp = new Date().toISOString();
     const userEmail = email ?? uid;
     const transactions: Transaction[] = normalizedLines.map(
       ({ line, item, destination }) => ({
